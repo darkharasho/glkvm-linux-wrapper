@@ -10,7 +10,7 @@ window.glkvm.onNavigate((view) => { if (view === 'dashboard') renderDashboard(ro
 let lastDeviceId: string | null = null;
 window.glkvm.onConnectionState((s) => {
   lastDeviceId = s.deviceId;
-  if (s.state === 'loading') showOverlay(root, { state: 'loading', onRetry: () => {}, onBack: () => window.glkvm.disconnect() });
+  if (s.state === 'loading') showOverlay(root, { state: 'loading', onBack: () => window.glkvm.disconnect() });
   else if (s.state === 'error') showOverlay(root, {
     state: 'error', message: s.message,
     onRetry: () => lastDeviceId && window.glkvm.connect(lastDeviceId),

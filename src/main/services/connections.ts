@@ -45,35 +45,53 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     async connect(id: string) {
       const device = deps.store.getDevices().find(d => d.id === id);
       if (!device) return;
+
+      // Detach whatever device view is currently frontmost so the dashboard (and its loading/error
+      // overlay) stays visible for the duration of this connection attempt. The new device view is
+      // only brought to front once it has actually finished loading (see did-finish-load below) —
+      // otherwise it would stack on top of the dashboard and hide the overlay/Retry/Back controls.
+      if (active) {
+        clearWatchdog(active);
+        if (views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
+      }
+      active = null;
+
       deps.onState({ deviceId: id, state: 'loading' });
+
       let view = views.get(id);
       if (!view) {
-        view = new WebContentsView({
+        const newView = new WebContentsView({
           webPreferences: {
             partition: `persist:device-${id}`,
             contextIsolation: true, nodeIntegration: false,
           },
         });
-        attachKeyboard(view.webContents, () => deps.store.getSettings(), (appAction) => {
+        attachKeyboard(newView.webContents, () => deps.store.getSettings(), (appAction) => {
           if (appAction === 'back-to-dashboard' || appAction === 'release') showDashboard();
           // next/prev/fullscreen/open-settings handled here or forwarded to renderer
         });
-        view.webContents.on('did-finish-load', () => { clearWatchdog(id); deps.onState({ deviceId: id, state: 'ready' }); });
-        view.webContents.on('did-fail-load', (_e, code, desc) => {
+        newView.webContents.on('did-finish-load', () => {
+          clearWatchdog(id);
+          deps.window.contentView.addChildView(newView);
+          newView.setBounds(bounds());
+          active = id;
+          deps.onState({ deviceId: id, state: 'ready' });
+        });
+        newView.webContents.on('did-fail-load', (_e, code, desc) => {
           clearWatchdog(id);
           if (code === -3) return; // aborted, ignore
+          // Device view was never (re-)attached above, so the dashboard + error overlay stay frontmost.
           deps.onState({ deviceId: id, state: 'error', message: desc });
         });
-        views.set(id, view);
+        views.set(id, newView);
+        view = newView;
       }
-      if (active && active !== id) clearWatchdog(active);
-      if (active && views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
-      deps.window.contentView.addChildView(view);
-      view.setBounds(bounds());
-      active = id;
       void session.fromPartition(`persist:device-${id}`); // ensure partition exists
       clearWatchdog(id);
-      watchdogs.set(id, setTimeout(() => deps.onState({ deviceId: id, state: 'error', message: 'Timed out' }), 10_000));
+      watchdogs.set(id, setTimeout(() => {
+        // Timed out before did-finish-load ever fired, so the view was never attached — dashboard stays frontmost.
+        deps.onState({ deviceId: id, state: 'error', message: 'Timed out' });
+      }, 10_000));
       await view.webContents.loadURL(device.url);
     },
     async disconnect() { showDashboard(); },

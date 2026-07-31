@@ -35,4 +35,19 @@ describe('validateSettings', () => {
     const merged = s.hotkeys.find(h => h.id === custom.id)!;
     expect(merged.accelerator).toBe('Ctrl+Alt+Q');
   });
+  it('rejects incomplete hotkey overrides (missing editable) and falls back to defaults', () => {
+    const incompleteOverride = {
+      id: DEFAULT_HOTKEYS[0].id,
+      accelerator: 'Ctrl+Alt+Q',
+      action: 'release',
+      label: 'Custom Release',
+      // editable intentionally omitted
+    };
+    const s = validateSettings({ hotkeys: [incompleteOverride] });
+    const fallback = s.hotkeys.find(h => h.id === DEFAULT_HOTKEYS[0].id)!;
+    // Should fall back to default since override is incomplete
+    expect(fallback.accelerator).toBe(DEFAULT_HOTKEYS[0].accelerator);
+    expect(typeof fallback.editable).toBe('boolean');
+    expect(fallback.editable).toBe(true);
+  });
 });

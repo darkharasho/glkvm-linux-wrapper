@@ -36,7 +36,8 @@ function isHotkey(v: unknown): v is HotkeyBinding {
   if (typeof v !== 'object' || v === null) return false;
   const h = v as Record<string, unknown>;
   return typeof h.id === 'string' && typeof h.accelerator === 'string'
-    && typeof h.action === 'string' && typeof h.label === 'string';
+    && typeof h.action === 'string' && typeof h.label === 'string'
+    && typeof h.editable === 'boolean';
 }
 
 export function validateSettings(raw: unknown): Settings {

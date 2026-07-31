@@ -4,6 +4,7 @@ import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
 import { installCertHandler } from './services/certs';
 import { createLogger } from './services/logger';
+import { initUpdater } from './services/updater';
 import { registerIpc } from './ipc';
 
 app.whenReady().then(() => {
@@ -11,6 +12,12 @@ app.whenReady().then(() => {
   const store = createStore(app.getPath('userData'));
   const logger = createLogger(app.getPath('logs'));
   logger.info('app ready');
+
+  try {
+    initUpdater(logger);
+  } catch (e) {
+    logger.error('updater init failed', e);
+  }
 
   const connections = createConnectionManager({
     window,

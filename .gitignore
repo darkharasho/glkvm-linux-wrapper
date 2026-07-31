@@ -9,3 +9,5 @@ out
 .sai/
 
 .worktrees/
+test-results
+playwright-report

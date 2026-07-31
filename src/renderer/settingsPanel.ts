@@ -25,20 +25,46 @@ export async function openSettings(root: HTMLElement, onClose: () => void): Prom
   dlg.addEventListener('close', () => { dlg.remove(); onClose(); });
 }
 
+const ACTION_OPTIONS: ReadonlyArray<{ value: HotkeyBinding['action']; label: string }> = [
+  { value: 'remote', label: 'Send to remote' },
+  { value: 'release', label: 'Release capture' },
+  { value: 'local:back-to-dashboard', label: 'Back to dashboard' },
+  { value: 'local:next-device', label: 'Next device' },
+  { value: 'local:prev-device', label: 'Previous device' },
+  { value: 'local:toggle-fullscreen', label: 'Toggle fullscreen' },
+  { value: 'local:open-settings', label: 'Open settings' },
+  { value: 'local:quit', label: 'Quit' },
+];
+
 function renderRow(hk: HotkeyBinding, draft: Settings): HTMLElement {
   const li = document.createElement('li');
   li.className = 'hotkey-row';
+  const kbdAttrs = hk.editable ? ' tabindex="0"' : '';
+  const optionsHtml = ACTION_OPTIONS
+    .map(opt => `<option value="${opt.value}"${opt.value === hk.action ? ' selected' : ''}>${opt.label}</option>`)
+    .join('');
   li.innerHTML = `<span class="label">${hk.label}</span>
-    <kbd class="accel" tabindex="0">${hk.accelerator}</kbd>`;
+    <select class="action"${hk.editable ? '' : ' disabled'}>${optionsHtml}</select>
+    <kbd class="accel"${kbdAttrs}>${hk.accelerator}</kbd>`;
   const kbd = li.querySelector('.accel') as HTMLElement;
-  kbd.addEventListener('keydown', (e) => {
-    e.preventDefault();
-    const accel = captureAccelerator(e);
-    if (!accel) return;
-    hk.accelerator = accel;                 // mutate draft in place
-    kbd.textContent = accel;
+  const select = li.querySelector('.action') as HTMLSelectElement;
+
+  if (hk.editable) {
+    kbd.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      const accel = captureAccelerator(e);
+      if (!accel) return;
+      hk.accelerator = accel;                 // mutate draft in place
+      kbd.textContent = accel;
+      draft.hotkeys = draft.hotkeys.map(h => h.id === hk.id ? hk : h);
+    });
+  }
+
+  select.addEventListener('change', () => {
+    hk.action = select.value as HotkeyBinding['action'];   // mutate draft in place
     draft.hotkeys = draft.hotkeys.map(h => h.id === hk.id ? hk : h);
   });
+
   return li;
 }
 

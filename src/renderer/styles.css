@@ -1,2 +1,91 @@
 :root { color-scheme: dark; }
 body { margin: 0; font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; }
+
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button:hover { background: #30363d; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #21262d;
+}
+.topbar h1 { font-size: 18px; margin: 0; }
+.topbar div { display: flex; gap: 8px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.empty { color: #8b949e; }
+
+.tile {
+  --tile: #1f6feb;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #30363d;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tile) 18%, #161b22), #161b22);
+  text-align: left;
+}
+.tile:hover { border-color: var(--tile); background: #161b22; }
+
+.tile .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tile);
+}
+.tile .name { font-weight: 600; font-size: 15px; }
+.tile .addr { color: #8b949e; font-size: 13px; }
+
+.device-dialog {
+  background: #161b22;
+  color: inherit;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 280px;
+}
+.device-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.device-dialog h2 { margin: 0 0 12px; font-size: 16px; }
+.device-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #8b949e;
+}
+.device-dialog input {
+  font-family: inherit;
+  color: inherit;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px;
+}
+.device-dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+}

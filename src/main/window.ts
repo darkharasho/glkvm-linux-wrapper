@@ -1,7 +1,7 @@
 import { BaseWindow, WebContentsView } from 'electron';
 import { join } from 'node:path';
 
-export function createMainWindow(): BaseWindow {
+export function createMainWindow(): { window: BaseWindow; dashboard: WebContentsView } {
   const win = new BaseWindow({ width: 1100, height: 760, title: 'GLKVM' });
   const dashboard = new WebContentsView({
     webPreferences: {
@@ -23,5 +23,5 @@ export function createMainWindow(): BaseWindow {
     const b = win.getContentBounds();
     dashboard.setBounds({ x: 0, y: 0, width: b.width, height: b.height });
   });
-  return win;
+  return { window: win, dashboard };
 }

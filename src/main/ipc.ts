@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import { writeFileSync, readFileSync } from 'node:fs';
 import type { createStore } from './services/store';
 import type { ConnectionManager } from './services/connections';
@@ -36,6 +36,5 @@ export function registerIpc(store: Store, connections: ConnectionManager): void 
     });
     if (response === 2) return;
     store.applyImport(bundle, response === 1 ? 'replace' : 'merge');
-    BrowserWindow.getAllWindows(); // views notified via connections/dashboard refresh
   });
 }

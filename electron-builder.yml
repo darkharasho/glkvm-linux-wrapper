@@ -1,0 +1,17 @@
+appId: com.darkharasho.glkvm-linux-wrapper
+productName: GLKVM
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+linux:
+  target: [AppImage]
+  category: Utility
+  icon: build/icon.png
+  maintainer: darkharasho
+publish:
+  provider: github
+  owner: darkharasho
+  repo: glkvm-linux-wrapper

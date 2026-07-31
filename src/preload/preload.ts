@@ -1,3 +1,18 @@
-import { contextBridge } from 'electron';
-// Expanded in Task 7. Placeholder bridge proves the wiring.
-contextBridge.exposeInMainWorld('glkvm', { version: '0.1.0' });
+import { contextBridge, ipcRenderer } from 'electron';
+import type { GlkvmApi } from './api';
+
+const api: GlkvmApi = {
+  listDevices: () => ipcRenderer.invoke('devices:list'),
+  addDevice: (input) => ipcRenderer.invoke('devices:add', input),
+  updateDevice: (id, patch) => ipcRenderer.invoke('devices:update', id, patch),
+  removeDevice: (id) => ipcRenderer.invoke('devices:remove', id),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (next) => ipcRenderer.invoke('settings:set', next),
+  connect: (id) => ipcRenderer.invoke('conn:connect', id),
+  disconnect: () => ipcRenderer.invoke('conn:disconnect'),
+  exportBackup: () => ipcRenderer.invoke('backup:export'),
+  importBackup: () => ipcRenderer.invoke('backup:import'),
+  onConnectionState: (cb) => { ipcRenderer.on('conn:state', (_e, s) => cb(s)); },
+  onNavigate: (cb) => { ipcRenderer.on('nav:view', (_e, v) => cb(v)); },
+};
+contextBridge.exposeInMainWorld('glkvm', api);

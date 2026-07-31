@@ -1,0 +1,33 @@
+{
+  "name": "glkvm-linux-wrapper",
+  "version": "0.1.0",
+  "description": "Linux-first Electron wrapper for the GL.iNet KVM web UI",
+  "license": "MIT",
+  "author": "darkharasho",
+  "main": "out/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "test": "vitest run --maxWorkers=2",
+    "test:watch": "vitest --maxWorkers=2",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-vite build && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-vite": "^2.3.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "playwright": "^1.47.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  }
+}

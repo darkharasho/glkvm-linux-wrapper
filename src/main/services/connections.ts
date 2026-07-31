@@ -80,6 +80,20 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           if (appAction === 'back-to-dashboard' || appAction === 'release') showDashboard();
           // next/prev/fullscreen/open-settings handled here or forwarded to renderer
         });
+        // Harden the remote KVM page against opening arbitrary windows or navigating away from
+        // its own origin (defense-in-depth against a malicious/compromised device page). The
+        // allowed origin is fixed to the device's own URL at creation time — using getURL() here
+        // would be empty until the first load finishes and would incorrectly block that load.
+        const deviceOrigin = (() => { try { return new URL(device.url).origin; } catch { return null; } })();
+        newView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+        newView.webContents.on('will-navigate', (e, navUrl) => {
+          try {
+            const target = new URL(navUrl);
+            if (!deviceOrigin || target.origin !== deviceOrigin) e.preventDefault();
+          } catch {
+            e.preventDefault();
+          }
+        });
         newView.webContents.on('did-finish-load', () => {
           if (target !== id) return; // superseded by a later connect()/showDashboard() — ignore
           clearWatchdog(id);
@@ -105,7 +119,14 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
         // Timed out before did-finish-load ever fired, so the view was never attached — dashboard stays frontmost.
         deps.onState({ deviceId: id, state: 'error', message: 'Timed out' });
       }, 10_000));
-      await view.webContents.loadURL(device.url);
+      // loadURL rejects on did-fail-load (e.g. ERR_CONNECTION_REFUSED); the did-fail-load handler
+      // above already owns reporting that error state, so swallow the rejection here to avoid an
+      // unhandled promise rejection surfacing to the ipc caller.
+      try {
+        await view.webContents.loadURL(device.url);
+      } catch {
+        // handled via did-fail-load
+      }
     },
     async disconnect() { showDashboard(); },
   };

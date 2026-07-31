@@ -21,6 +21,14 @@ describe('validateDevices', () => {
   it('returns [] for non-array input', () => {
     expect(validateDevices(null)).toEqual([]);
   });
+  it('drops a device with an invalid (non-hex) color', () => {
+    const out = validateDevices([
+      { id: 'a', name: 'Work', address: 'workmac.local', url: 'https://workmac.local', createdAt: 1, color: 'url(https://evil.example/x.png)' },
+      { id: 'b', name: 'Home', address: 'home.local', url: 'https://home.local', createdAt: 2, color: '#1f6feb' },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('b');
+  });
 });
 
 describe('validateSettings', () => {

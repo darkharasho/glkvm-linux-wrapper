@@ -1,4 +1,4 @@
-import { app, dialog } from 'electron';
+import { app, dialog, session } from 'electron';
 import { createMainWindow } from './window';
 import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
@@ -9,6 +9,23 @@ import { registerIpc } from './ipc';
 
 app.whenReady().then(() => {
   const { window, dashboard } = createMainWindow();
+
+  // Defense-in-depth CSP for the dashboard UI only (packaged builds only — a strict CSP would
+  // break Vite HMR in `npm run dev`). Scoped to the default session, which the dashboard's
+  // WebContentsView uses; device WebContentsViews each use their own `persist:device-${id}`
+  // partition/session, so this never touches remote KVM content.
+  if (app.isPackaged) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+          ],
+        },
+      });
+    });
+  }
   const store = createStore(app.getPath('userData'));
   const logger = createLogger(app.getPath('logs'));
   logger.info('app ready');

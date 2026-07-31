@@ -1,4 +1,5 @@
 import type { Settings, HotkeyBinding } from '@shared/types';
+import { toAccelerator, type KeyInput } from '@shared/keybindings';
 
 export async function openSettings(root: HTMLElement, onClose: () => void): Promise<void> {
   const settings = await window.glkvm.getSettings();
@@ -41,11 +42,11 @@ function renderRow(hk: HotkeyBinding, draft: Settings): HTMLElement {
   li.className = 'hotkey-row';
   const kbdAttrs = hk.editable ? ' tabindex="0"' : '';
   const optionsHtml = ACTION_OPTIONS
-    .map(opt => `<option value="${opt.value}"${opt.value === hk.action ? ' selected' : ''}>${opt.label}</option>`)
+    .map(opt => `<option value="${escapeHtml(opt.value)}"${opt.value === hk.action ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`)
     .join('');
-  li.innerHTML = `<span class="label">${hk.label}</span>
+  li.innerHTML = `<span class="label">${escapeHtml(hk.label)}</span>
     <select class="action"${hk.editable ? '' : ' disabled'}>${optionsHtml}</select>
-    <kbd class="accel"${kbdAttrs}>${hk.accelerator}</kbd>`;
+    <kbd class="accel"${kbdAttrs}>${escapeHtml(hk.accelerator)}</kbd>`;
   const kbd = li.querySelector('.accel') as HTMLElement;
   const select = li.querySelector('.action') as HTMLSelectElement;
 
@@ -69,14 +70,11 @@ function renderRow(hk: HotkeyBinding, draft: Settings): HTMLElement {
 }
 
 function captureAccelerator(e: KeyboardEvent): string | null {
-  const parts: string[] = [];
-  if (e.ctrlKey) parts.push('Ctrl');
-  if (e.altKey) parts.push('Alt');
-  if (e.shiftKey) parts.push('Shift');
-  if (e.metaKey) parts.push('Meta');
-  const k = e.key;
-  if (['Control', 'Alt', 'Shift', 'Meta'].includes(k)) return null; // modifier-only, wait for real key
-  const alias: Record<string, string> = { ArrowRight: 'Right', ArrowLeft: 'Left', ArrowUp: 'Up', ArrowDown: 'Down' };
-  parts.push(alias[k] ?? (k.length === 1 ? k.toUpperCase() : k));
-  return parts.join('+');
+  if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return null; // modifier-only, wait for real key
+  const input: KeyInput = { key: e.key, control: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey };
+  return toAccelerator(input);
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }

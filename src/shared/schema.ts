@@ -20,11 +20,17 @@ export const DEFAULT_SETTINGS: Settings = {
   hotkeys: DEFAULT_HOTKEYS,
 };
 
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
+
 function isDevice(v: unknown): v is Device {
   if (typeof v !== 'object' || v === null) return false;
   const d = v as Record<string, unknown>;
-  return ['id', 'name', 'address', 'url'].every(k => typeof d[k] === 'string')
-    && typeof d.createdAt === 'number';
+  if (!['id', 'name', 'address', 'url'].every(k => typeof d[k] === 'string')) return false;
+  if (typeof d.createdAt !== 'number') return false;
+  // color is optional, but if present must be a valid hex color — anything else (e.g. a url(...)
+  // value) is rejected so an imported backup can't smuggle in an outbound request via CSS.
+  if (d.color !== undefined && (typeof d.color !== 'string' || !HEX_COLOR_RE.test(d.color))) return false;
+  return true;
 }
 
 export function validateDevices(raw: unknown): Device[] {

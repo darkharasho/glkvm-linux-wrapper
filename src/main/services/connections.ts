@@ -33,6 +33,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   });
 
   function showDashboard() {
+    if (active) clearWatchdog(active);
     if (active && views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
     active = null;
     deps.dashboard.setBounds(bounds());
@@ -65,6 +66,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
         });
         views.set(id, view);
       }
+      if (active && active !== id) clearWatchdog(active);
       if (active && views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
       deps.window.contentView.addChildView(view);
       view.setBounds(bounds());

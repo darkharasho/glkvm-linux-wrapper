@@ -3,17 +3,22 @@ import { createMainWindow } from './window';
 import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
 import { installCertHandler } from './services/certs';
+import { createLogger } from './services/logger';
 import { registerIpc } from './ipc';
 
 app.whenReady().then(() => {
   const { window, dashboard } = createMainWindow();
   const store = createStore(app.getPath('userData'));
+  const logger = createLogger(app.getPath('logs'));
+  logger.info('app ready');
 
   const connections = createConnectionManager({
     window,
     dashboard,
     store,
     onState: (s) => {
+      if (s.state === 'error') logger.error(`connection error for ${s.deviceId ?? 'unknown'}`, s.message);
+      else logger.info(`connection state: ${s.state} (${s.deviceId ?? 'none'})`);
       dashboard.webContents.send('conn:state', s);
     },
   });

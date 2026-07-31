@@ -89,3 +89,52 @@ button:hover { background: #30363d; }
   margin: 12px 0 0;
   padding: 0;
 }
+
+.settings-panel {
+  background: #161b22;
+  color: inherit;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 360px;
+  max-width: 480px;
+}
+.settings-panel::backdrop { background: rgba(0, 0, 0, 0.6); }
+.settings-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.settings-panel h2 { margin: 0; font-size: 16px; }
+.settings-panel h3 { margin: 16px 0 8px; font-size: 13px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.04em; }
+.settings-panel .io { display: flex; gap: 8px; }
+.settings-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+}
+.hotkey-row .label { font-size: 13px; }
+.hotkey-row .accel {
+  font-family: inherit;
+  font-size: 12px;
+  color: inherit;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+}
+.hotkey-row .accel:focus {
+  outline: 2px solid #1f6feb;
+  outline-offset: 1px;
+}

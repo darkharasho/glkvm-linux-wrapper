@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { Device, Settings, BackupBundle } from '@shared/types';
-import { DEFAULT_SETTINGS, validateDevices, validateSettings } from '@shared/schema';
+import type { Device, Settings, BackupBundle, OsKind } from '@shared/types';
+import { DEFAULT_SETTINGS, validateDevices, validateSettings, coerceOs } from '@shared/schema';
 import { toDeviceUrl, normalizeAddress } from '@shared/url';
 import { applyBackup, buildBackup } from '@shared/backup';
 import type { TrustStore } from '@shared/certs';
@@ -38,21 +38,21 @@ export function createStore(baseDir: string) {
 
   return {
     getDevices: () => devices,
-    addDevice(input: { name: string; address: string; color?: string }): Device {
+    addDevice(input: { name: string; address: string; color?: string; os?: OsKind }): Device {
       const address = normalizeAddress(input.address);
       const d: Device = {
         id: randomUUID(), name: input.name, address, url: toDeviceUrl(address),
-        color: input.color, createdAt: Date.now(),
+        color: input.color, createdAt: Date.now(), os: coerceOs(input.os),
       };
       devices = [...devices, d];
       saveDevices();
       return d;
     },
-    updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color'>>): Device | null {
+    updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color' | 'os'>>): Device | null {
       const i = devices.findIndex(d => d.id === id);
       if (i === -1) return null;
       const address = patch.address ? normalizeAddress(patch.address) : devices[i].address;
-      const updated: Device = { ...devices[i], ...patch, address, url: toDeviceUrl(address) };
+      const updated: Device = { ...devices[i], ...patch, address, url: toDeviceUrl(address), os: coerceOs(patch.os ?? devices[i].os) };
       devices = devices.map(d => d.id === id ? updated : d);
       saveDevices();
       return updated;

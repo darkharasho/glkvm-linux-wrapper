@@ -1,6 +1,6 @@
 {
   "name": "glkvm-linux-wrapper",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "description": "Linux-first Electron wrapper for the GL.iNet KVM web UI",
   "license": "MIT",
   "author": "darkharasho",

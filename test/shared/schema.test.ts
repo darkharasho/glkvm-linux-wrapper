@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_HOTKEYS, DEFAULT_SETTINGS, validateDevices, validateSettings } from '@shared/schema';
+import { DEFAULT_HOTKEYS, DEFAULT_SETTINGS, validateDevices, validateSettings, coerceOs, OS_KINDS } from '@shared/schema';
 
 describe('defaults', () => {
   it('ship a release hotkey and a back-to-dashboard local action', () => {
@@ -57,5 +57,27 @@ describe('validateSettings', () => {
     expect(fallback.accelerator).toBe(DEFAULT_HOTKEYS[0].accelerator);
     expect(typeof fallback.editable).toBe('boolean');
     expect(fallback.editable).toBe(true);
+  });
+});
+
+describe('os field', () => {
+  it('defaults a device with no os to generic (back-compat)', () => {
+    const [d] = validateDevices([
+      { id: 'a', name: 'A', address: 'mypc.local', url: 'https://mypc.local', createdAt: 1 },
+    ]);
+    expect(d.os).toBe('generic');
+  });
+  it('keeps a valid os and repairs an invalid one', () => {
+    const out = validateDevices([
+      { id: 'a', name: 'A', address: 'mypc.local', url: 'https://mypc.local', createdAt: 1, os: 'macos' },
+      { id: 'b', name: 'B', address: 'desktop.local', url: 'https://desktop.local', createdAt: 1, os: 'beos' },
+    ]);
+    expect(out[0].os).toBe('macos');
+    expect(out[1].os).toBe('generic');
+  });
+  it('coerceOs guards the union', () => {
+    expect(coerceOs('linux')).toBe('linux');
+    expect(coerceOs(42)).toBe('generic');
+    expect(OS_KINDS).toContain('windows');
   });
 });

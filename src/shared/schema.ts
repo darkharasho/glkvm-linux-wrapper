@@ -1,4 +1,4 @@
-import type { Device, HotkeyBinding, Settings } from './types';
+import type { Device, HotkeyBinding, OsKind, Settings } from './types';
 
 export const SCHEMA_VERSION = 1;
 
@@ -22,6 +22,12 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
 
+export const OS_KINDS: OsKind[] = ['macos', 'windows', 'linux', 'generic'];
+
+export function coerceOs(v: unknown): OsKind {
+  return (OS_KINDS as string[]).includes(v as string) ? (v as OsKind) : 'generic';
+}
+
 function isDevice(v: unknown): v is Device {
   if (typeof v !== 'object' || v === null) return false;
   const d = v as Record<string, unknown>;
@@ -35,7 +41,9 @@ function isDevice(v: unknown): v is Device {
 
 export function validateDevices(raw: unknown): Device[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter(isDevice) as Device[];
+  return raw
+    .filter(isDevice)
+    .map((d) => ({ ...(d as Device), os: coerceOs((d as { os?: unknown }).os) }));
 }
 
 function isHotkey(v: unknown): v is HotkeyBinding {

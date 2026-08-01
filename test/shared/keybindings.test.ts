@@ -31,16 +31,23 @@ describe('macCmdRemap', () => {
   it('maps Ctrl+Shift+Z to Cmd+Shift+Z', () => {
     expect(macCmdRemap(key({ key: 'z', control: true, shift: true }))).toEqual({ keyCode: 'z', modifiers: ['meta', 'shift'] });
   });
-  it('does not remap Ctrl+Alt+C', () => {
-    expect(macCmdRemap(key({ key: 'c', control: true, alt: true }))).toBeNull();
+  it('maps any Ctrl+letter chord (Ctrl+Y -> Cmd+Y, Ctrl+W -> Cmd+W)', () => {
+    expect(macCmdRemap(key({ key: 'y', control: true }))).toEqual({ keyCode: 'y', modifiers: ['meta'] });
+    expect(macCmdRemap(key({ key: 'w', control: true }))).toEqual({ keyCode: 'w', modifiers: ['meta'] });
+  });
+  it('maps Ctrl+digit and Ctrl+punctuation', () => {
+    expect(macCmdRemap(key({ key: '1', control: true }))).toEqual({ keyCode: '1', modifiers: ['meta'] });
+    expect(macCmdRemap(key({ key: '/', control: true }))).toEqual({ keyCode: '/', modifiers: ['meta'] });
+  });
+  it('preserves Alt: Ctrl+Alt+C -> Cmd+Option+C', () => {
+    expect(macCmdRemap(key({ key: 'c', control: true, alt: true }))).toEqual({ keyCode: 'c', modifiers: ['meta', 'alt'] });
   });
   it('does not remap an already-meta-held input', () => {
     expect(macCmdRemap(key({ key: 'c', control: false, meta: true }))).toBeNull();
   });
-  it('does not remap Ctrl+Tab', () => {
+  it('leaves named keys as Ctrl (Ctrl+Tab, Ctrl+ArrowLeft, Ctrl+F5)', () => {
     expect(macCmdRemap(key({ key: 'Tab', control: true }))).toBeNull();
-  });
-  it('does not remap Ctrl+1 (not in the editing-chord set)', () => {
-    expect(macCmdRemap(key({ key: '1', control: true }))).toBeNull();
+    expect(macCmdRemap(key({ key: 'ArrowLeft', control: true }))).toBeNull();
+    expect(macCmdRemap(key({ key: 'F5', control: true }))).toBeNull();
   });
 });

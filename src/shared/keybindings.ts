@@ -29,15 +29,17 @@ export function resolveAction(input: KeyInput, bindings: HotkeyBinding[]): Hotke
   return match ? match.action : 'remote';
 }
 
-const MAC_CMD_KEYS = new Set(['c', 'v', 'x', 'a', 'z', 's', 'f']);
-
-/** For a macOS target, map a Ctrl+<key> editing chord to its Cmd(meta) equivalent.
- *  Returns the injected keyCode + modifiers, or null if this input should pass through unchanged. */
-export function macCmdRemap(input: KeyInput): { keyCode: string; modifiers: Array<'meta' | 'shift'> } | null {
-  if (!input.control || input.meta || input.alt) return null;   // only plain Ctrl+<key> (not Ctrl+Alt, not already-meta)
-  const k = input.key.length === 1 ? input.key.toLowerCase() : '';
-  if (!MAC_CMD_KEYS.has(k)) return null;
-  const modifiers: Array<'meta' | 'shift'> = ['meta'];
+/** For a macOS target, map a Ctrl+<key> chord to its Cmd(meta) equivalent so a
+ *  Linux keyboard drives Mac shortcuts (Ctrl+C -> Cmd+C, Ctrl+Z -> Cmd+Z, etc).
+ *  Applies to any single printable character key (letters, digits, punctuation),
+ *  preserving Alt and Shift. Named keys (Tab, arrows, F-keys, Escape, Enter…) are
+ *  left as Ctrl on purpose — they have distinct macOS meanings that a blanket swap
+ *  would break. Returns the injected keyCode + modifiers, or null to pass through. */
+export function macCmdRemap(input: KeyInput): { keyCode: string; modifiers: Array<'meta' | 'alt' | 'shift'> } | null {
+  if (!input.control || input.meta) return null;   // must be a Ctrl chord not already using Cmd/Meta
+  if (input.key.length !== 1) return null;         // single printable char only; named keys pass through as Ctrl
+  const modifiers: Array<'meta' | 'alt' | 'shift'> = ['meta'];
+  if (input.alt) modifiers.push('alt');
   if (input.shift) modifiers.push('shift');
-  return { keyCode: k, modifiers };
+  return { keyCode: input.key.toLowerCase(), modifiers };
 }

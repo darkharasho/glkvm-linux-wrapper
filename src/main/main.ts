@@ -41,10 +41,15 @@ app.whenReady().then(() => {
     window,
     dashboard,
     store,
+    layout,
     onState: (s) => {
       if (s.state === 'error') logger.error(`connection error for ${s.deviceId ?? 'unknown'}`, s.message);
       else logger.info(`connection state: ${s.state} (${s.deviceId ?? 'none'})`);
       dashboard.webContents.send('conn:state', s);
+      const dev = s.deviceId ? store.getDevices().find(d => d.id === s.deviceId) : null;
+      layout.setRail(s.deviceId && s.state === 'ready' && dev
+        ? { mode: 'connected', deviceName: dev.name, captureOn: true }
+        : { mode: 'idle' });
     },
   });
 

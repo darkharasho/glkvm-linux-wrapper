@@ -1,6 +1,7 @@
 import { BaseWindow, WebContentsView, session } from 'electron';
 import type { createStore } from './store';
 import { attachKeyboard } from './keyboard';
+import type { LayoutController } from '../window';
 type Store = ReturnType<typeof createStore>;
 
 export interface ConnectionManager {
@@ -13,6 +14,7 @@ interface Deps {
   window: BaseWindow;
   dashboard: WebContentsView;
   store: Store;
+  layout: LayoutController;
   onState: (s: { deviceId: string | null; state: 'loading' | 'ready' | 'error'; message?: string }) => void;
 }
 
@@ -22,16 +24,10 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   let active: string | null = null; // device currently attached/shown (set only on success)
   let target: string | null = null; // device the user currently intends to view (set as soon as connect() is called)
 
-  const bounds = () => { const b = deps.window.getContentBounds(); return { x: 0, y: 0, width: b.width, height: b.height }; };
-
   function clearWatchdog(id: string) {
     const t = watchdogs.get(id);
     if (t) { clearTimeout(t); watchdogs.delete(id); }
   }
-
-  deps.window.on('resize', () => {
-    if (active && views.has(active)) views.get(active)!.setBounds(bounds());
-  });
 
   function showDashboard() {
     if (target) clearWatchdog(target);
@@ -39,7 +35,8 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     if (active && views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
     active = null;
     target = null;
-    deps.dashboard.setBounds(bounds());
+    deps.layout.setActiveDeviceView(null);
+    deps.layout.relayout();
     deps.onState({ deviceId: null, state: 'ready' });
   }
 
@@ -62,6 +59,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
       if (active) {
         clearWatchdog(active);
         if (views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
+        deps.layout.setActiveDeviceView(null);
       }
       active = null;
       target = id;
@@ -98,7 +96,8 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           if (target !== id) return; // superseded by a later connect()/showDashboard() — ignore
           clearWatchdog(id);
           deps.window.contentView.addChildView(newView);
-          newView.setBounds(bounds());
+          deps.layout.setActiveDeviceView(newView);
+          deps.layout.relayout();
           active = id;
           deps.onState({ deviceId: id, state: 'ready' });
         });

@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS } from '@shared/schema';
 import type { Device } from '@shared/types';
 
 const dev = (id: string, address: string): Device =>
-  ({ id, name: id, address, url: `https://${address}`, createdAt: 1 });
+  ({ id, name: id, address, url: `https://${address}`, createdAt: 1, os: 'generic' });
 
 describe('backup round-trip', () => {
   it('parses what it builds', () => {

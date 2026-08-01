@@ -45,7 +45,7 @@ export interface RailHandlers {
   onDisconnect?: () => void;
 }
 
-/** Window-control + rail-nav IPC. `handlers` lets main.ts wire rail nav (Task 11 hooks it to connections.disconnect()). */
+/** Window-control + rail-nav IPC. `handlers` lets main.ts wire rail nav: Back → background() (keep session live), Disconnect → disconnect() (end session). */
 export function registerWindowIpc(win: BaseWindow, handlers: RailHandlers = {}): void {
   ipcMain.on('win:min', () => win.minimize());
   ipcMain.on('win:max', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));

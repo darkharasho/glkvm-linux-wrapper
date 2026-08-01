@@ -4,12 +4,15 @@ import { toAccelerator, type KeyInput } from '@shared/keybindings';
 export async function openSettings(root: HTMLElement, onClose: () => void): Promise<void> {
   const settings = await window.glkvm.getSettings();
   const dlg = document.createElement('dialog');
-  dlg.className = 'settings-panel';
+  dlg.className = 'settings-panel settings';
   dlg.innerHTML = `
-    <header><h2>Settings</h2><button id="close">Done</button></header>
-    <section class="io"><button id="export">Export backup…</button><button id="import">Import backup…</button></section>
-    <h3>Hotkeys</h3>
-    <ul id="hotkeys"></ul>`;
+    <div class="mh"><h3>Settings</h3></div>
+    <div class="mb">
+      <section class="io"><button id="export">Export backup…</button><button id="import">Import backup…</button></section>
+      <h4>Hotkeys</h4>
+      <ul id="hotkeys" class="hk-list"></ul>
+    </div>
+    <div class="mf"><button id="close" class="pri">Done</button></div>`;
   document.body.appendChild(dlg);
   dlg.showModal();
 

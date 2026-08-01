@@ -1,4 +1,4 @@
-import { app, dialog, session } from 'electron';
+import { app, session } from 'electron';
 import { createMainWindow } from './window';
 import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
@@ -6,10 +6,22 @@ import { installCertHandler } from './services/certs';
 import { createLogger } from './services/logger';
 import { initUpdater } from './services/updater';
 import { registerIpc, registerWindowIpc } from './ipc';
+import { createModalBridge } from './modal-bridge';
 
 app.whenReady().then(() => {
-  const { window, dashboard, layout } = createMainWindow();
+  const { window, dashboard, titlebar, layout } = createMainWindow();
   layout.setRail({ mode: 'idle' });
+
+  // Brings the dashboard (and titlebar) frontmost above the active device view so an in-app
+  // modal can render on top of it; returns a restore fn that re-lays-out to bring the device
+  // view back to front.
+  const presentOverlayUI = (): (() => void) => {
+    window.contentView.addChildView(dashboard);
+    window.contentView.addChildView(titlebar);
+    return () => layout.relayout();
+  };
+
+  const bridge = createModalBridge(dashboard, presentOverlayUI);
 
   // Defense-in-depth CSP for the dashboard UI only (packaged builds only — a strict CSP would
   // break Vite HMR in `npm run dev`). Scoped to the default session, which the dashboard's
@@ -32,7 +44,7 @@ app.whenReady().then(() => {
   logger.info('app ready');
 
   try {
-    initUpdater(logger);
+    initUpdater(logger, bridge);
   } catch (e) {
     logger.error('updater init failed', e);
   }
@@ -53,19 +65,14 @@ app.whenReady().then(() => {
     },
   });
 
-  installCertHandler(store, async (host, fingerprint) => {
-    const { response } = await dialog.showMessageBox(window, {
-      type: 'warning',
-      buttons: ['Trust', 'Cancel'],
-      defaultId: 1,
-      cancelId: 1,
-      message: `Untrusted certificate for ${host}`,
-      detail: `Fingerprint: ${fingerprint}\n\nOnly trust this if you recognize the device.`,
-    });
-    return response === 0;
-  });
+  // The renderer only displays the host/fingerprint and returns 'trust'/'cancel'; main remains
+  // the sole trust authority (decideCert + store.trustCert are untouched — see certs.ts).
+  const promptTrust = async (host: string, fingerprint: string): Promise<boolean> =>
+    (await bridge.request({ kind: 'cert-trust', host, fingerprint })) === 'trust';
 
-  registerIpc(store, connections);
+  installCertHandler(store, promptTrust);
+
+  registerIpc(store, connections, bridge);
   registerWindowIpc(window, {
     onBack: () => connections.disconnect(),
     onDisconnect: () => connections.disconnect(),

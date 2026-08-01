@@ -1,6 +1,11 @@
 import { renderDashboard } from './dashboard';
 import { openSettings } from './settingsPanel';
 import { showOverlay, hideOverlay } from './overlay';
+import { openModal } from './modal';
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+}
 
 const root = document.querySelector('#app') as HTMLElement;
 renderDashboard(root);
@@ -17,4 +22,35 @@ window.glkvm.onConnectionState((s) => {
     onBack: () => window.glkvm.disconnect(),
   });
   else hideOverlay(root);
+});
+
+window.glkvm.onModalShow(async (spec) => {
+  let value = 'cancel';
+  if (spec.kind === 'cert-trust') {
+    value = await openModal({
+      title: 'Trust this device?',
+      subtitle: `${spec.host} is using a self-signed certificate. Trust it only if you recognize this device.`,
+      bodyHtml: `<div class="fp"><span class="k">SHA-256</span><br>${escapeHtml(String(spec.fingerprint))}</div>`,
+      buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Trust device', value: 'trust', primary: true }],
+    });
+  } else if (spec.kind === 'import-choice') {
+    value = await openModal({
+      title: 'Import devices & settings',
+      subtitle: 'Merge with your current setup, or replace everything?',
+      buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Merge', value: 'merge' }, { label: 'Replace', value: 'replace', primary: true }],
+    });
+  } else if (spec.kind === 'alert') {
+    value = await openModal({
+      title: 'Import failed',
+      subtitle: String(spec.message),
+      buttons: [{ label: 'OK', value: 'ok', primary: true }],
+    });
+  } else if (spec.kind === 'update-ready') {
+    value = await openModal({
+      title: 'Update ready',
+      subtitle: `GLKVM ${spec.version} is ready to install.`,
+      buttons: [{ label: 'Later', value: 'later' }, { label: 'Restart now', value: 'restart', primary: true }],
+    });
+  }
+  window.glkvm.modalDone(spec.id, value);
 });

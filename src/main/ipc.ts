@@ -2,11 +2,12 @@ import { ipcMain, dialog, BaseWindow } from 'electron';
 import { writeFileSync, readFileSync } from 'node:fs';
 import type { createStore } from './services/store';
 import type { ConnectionManager } from './services/connections';
+import type { createModalBridge } from './modal-bridge';
 import { parseBackup } from '@shared/backup';
 
 type Store = ReturnType<typeof createStore>;
 
-export function registerIpc(store: Store, connections: ConnectionManager): void {
+export function registerIpc(store: Store, connections: ConnectionManager, bridge: ReturnType<typeof createModalBridge>): void {
   ipcMain.handle('devices:list', () => store.getDevices());
   ipcMain.handle('devices:add', (_e, input) => store.addDevice(input));
   ipcMain.handle('devices:update', (_e, id, patch) => store.updateDevice(id, patch));
@@ -29,13 +30,13 @@ export function registerIpc(store: Store, connections: ConnectionManager): void 
     if (canceled || !filePaths[0]) return;
     let bundle;
     try { bundle = parseBackup(readFileSync(filePaths[0], 'utf8')); }
-    catch { await dialog.showMessageBox({ type: 'error', message: 'Invalid backup file' }); return; }
-    const { response } = await dialog.showMessageBox({
-      type: 'question', buttons: ['Merge', 'Replace', 'Cancel'], defaultId: 0, cancelId: 2,
-      message: 'Import devices & settings', detail: 'Merge with current, or replace everything?',
-    });
-    if (response === 2) return;
-    store.applyImport(bundle, response === 1 ? 'replace' : 'merge');
+    catch {
+      await bridge.request({ kind: 'alert', message: "That file isn't a valid GLKVM backup." });
+      return;
+    }
+    const v = await bridge.request({ kind: 'import-choice' });
+    if (v === 'cancel') return;
+    store.applyImport(bundle, v === 'replace' ? 'replace' : 'merge');
   });
 }
 

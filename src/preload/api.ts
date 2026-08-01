@@ -13,5 +13,7 @@ export interface GlkvmApi {
   importBackup(): Promise<void>;   // opens open dialog + merge/replace prompt in main
   onConnectionState(cb: (s: { deviceId: string | null; state: 'loading' | 'ready' | 'error'; message?: string }) => void): void;
   onNavigate(cb: (view: 'dashboard' | 'device' | 'settings') => void): void;
+  onModalShow(cb: (spec: { id: number; kind: string; [k: string]: unknown }) => void): void;
+  modalDone(id: number, value: string): void;
 }
 declare global { interface Window { glkvm: GlkvmApi; } }

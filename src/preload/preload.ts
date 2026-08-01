@@ -14,5 +14,7 @@ const api: GlkvmApi = {
   importBackup: () => ipcRenderer.invoke('backup:import'),
   onConnectionState: (cb) => { ipcRenderer.on('conn:state', (_e, s) => cb(s)); },
   onNavigate: (cb) => { ipcRenderer.on('nav:view', (_e, v) => cb(v)); },
+  onModalShow: (cb) => { ipcRenderer.on('modal:show', (_e, spec) => cb(spec)); },
+  modalDone: (id, value) => { ipcRenderer.send('modal:done', { id, value }); },
 };
 contextBridge.exposeInMainWorld('glkvm', api);

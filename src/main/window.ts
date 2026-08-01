@@ -46,7 +46,10 @@ export function createMainWindow(): {
   let activeDeviceView: WebContentsView | null = null;
   const relayout = () => {
     dashboard.setBounds(contentArea(win));
-    if (activeDeviceView) activeDeviceView.setBounds(contentArea(win));
+    if (activeDeviceView) {
+      activeDeviceView.setBounds(contentArea(win));
+      win.contentView.addChildView(activeDeviceView); // re-raise above dashboard (e.g. after a modal overlay raised it)
+    }
     titlebar.setBounds(railArea(win));
     win.contentView.addChildView(titlebar); // re-raise to top
   };

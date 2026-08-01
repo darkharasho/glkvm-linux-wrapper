@@ -12,6 +12,7 @@ export interface LayoutController {
   relayout(): void;
   setActiveDeviceView(v: WebContentsView | null): void;
   setRail(state: RailState): void;
+  onAfterRelayout(fn: () => void): void;
 }
 
 export function createMainWindow(): {
@@ -46,6 +47,7 @@ export function createMainWindow(): {
   let activeDeviceView: WebContentsView | null = null;
   let lastW = 0;
   let lastH = 0;
+  const afterRelayoutHooks: Array<() => void> = [];
   const relayout = () => {
     const b = win.getBounds();
     lastW = b.width;
@@ -57,6 +59,7 @@ export function createMainWindow(): {
     }
     titlebar.setBounds(railArea(win));
     win.contentView.addChildView(titlebar); // re-raise to top
+    for (const h of afterRelayoutHooks) h();
   };
   const layout: LayoutController = {
     relayout,
@@ -65,6 +68,7 @@ export function createMainWindow(): {
       relayout();
     },
     setRail: (s) => titlebar.webContents.send('rail:state', s),
+    onAfterRelayout: (fn) => { afterRelayoutHooks.push(fn); },
   };
 
   const load = (view: WebContentsView, htmlFile: string, devPath: string) => {

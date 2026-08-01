@@ -26,11 +26,43 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   const loaded = new Set<string>();
   let active: string | null = null; // device currently attached/shown (set only on success)
   let target: string | null = null; // device the user currently intends to view (set as soon as connect() is called)
+  const naturalSize = new Map<string, { w: number; h: number }>(); // remote content size (device px @ zoom 1)
+  let fitTimer: ReturnType<typeof setTimeout> | null = null;
 
   function clearWatchdog(id: string) {
     const t = watchdogs.get(id);
     if (t) { clearTimeout(t); watchdogs.delete(id); }
   }
+
+  // Measure the remote's natural content size at 1:1 (called right after a fresh
+  // load, when zoomFactor is 1). Uses a double rAF so layout has settled.
+  async function measureNatural(id: string): Promise<void> {
+    const v = views.get(id);
+    if (!v || v.webContents.isDestroyed()) return;
+    try {
+      const m = await v.webContents.executeJavaScript(
+        'new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => res({' +
+        ' w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }))))'
+      );
+      if (m && m.w > 0 && m.h > 0) naturalSize.set(id, { w: m.w, h: m.h });
+    } catch { /* page not ready / navigating */ }
+  }
+  // Scale the active view so the remote fits its current bounds (never enlarge past 1:1).
+  function applyFit(id: string): void {
+    const v = views.get(id);
+    if (!v || v.webContents.isDestroyed()) return;
+    const nat = naturalSize.get(id);
+    if (!nat || nat.w <= 0 || nat.h <= 0) return;
+    const b = v.getBounds(); // device px (== CSS px at zoom 1)
+    if (b.width <= 0 || b.height <= 0) return;
+    const factor = Math.max(0.3, Math.min(1, b.width / nat.w, b.height / nat.h));
+    if (Math.abs(v.webContents.getZoomFactor() - factor) > 0.005) v.webContents.setZoomFactor(factor);
+  }
+  function scheduleFit(): void {
+    if (fitTimer) clearTimeout(fitTimer);
+    fitTimer = setTimeout(() => { if (active) applyFit(active); }, 120);
+  }
+  deps.layout.onAfterRelayout(scheduleFit);
 
   // "Back" — return to the dashboard but keep the active device's session live in the
   // background (view stays cached in `views`/`loaded`) so its dashboard row can show
@@ -144,6 +176,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
             loaded.add(id);
             deps.onConnectedChange?.([...loaded]);
           }
+          void measureNatural(id).then(() => applyFit(id));
         });
         newView.webContents.on('did-fail-load', (_e, code, desc) => {
           if (code === -3) return; // aborted, ignore

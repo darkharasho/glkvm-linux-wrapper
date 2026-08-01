@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>GLKVM rail</title>
+    <style>
+      :root {
+        --bg: #0c0c0d; --panel: #141416; --panel2: #161618; --line: #1c1c1f; --line2: #232327;
+        --ink: #f2f2f3; --mut: #8a8a90; --dim: #6a6a70; --danger: #e5484d; --ok: #34d399;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 40px; overflow: hidden; background: var(--panel);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; }
+      #rail { display: flex; align-items: center; justify-content: space-between; height: 40px;
+        padding: 0 10px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; user-select: none; }
+      .l, .r { display: flex; align-items: center; gap: 10px; height: 100%; }
+      .no-drag { -webkit-app-region: no-drag; }
+      .wm { font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); }
+      .ghost { font-family: inherit; font-size: 12px; font-weight: 500; color: var(--ink);
+        background: transparent; border: 1px solid var(--line2); border-radius: 7px; padding: 6px 10px; cursor: pointer; }
+      .ghost:hover { background: var(--panel2); }
+      .ghost.danger { color: var(--danger); border-color: var(--line2); }
+      .ghost.danger:hover { background: rgba(229, 72, 77, 0.12); }
+      .sep { width: 1px; height: 16px; background: var(--line2); }
+      .dev { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+      .cap { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--mut); }
+      .cap .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+      .cap.on { color: var(--ok); }
+      .cap.on .dot { background: var(--ok); }
+      .mono { font-family: 'JetBrains Mono', monospace; }
+      .ctrls { display: flex; align-items: center; gap: 2px; }
+      .c { font-family: inherit; font-size: 13px; line-height: 1; color: var(--mut); background: transparent;
+        border: none; border-radius: 6px; padding: 7px 11px; cursor: pointer; }
+      .c:hover { background: var(--panel2); color: var(--ink); }
+      .c.x:hover { background: var(--danger); color: #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="rail"></div>
+    <script type="module" src="./titlebar.ts"></script>
+  </body>
+</html>

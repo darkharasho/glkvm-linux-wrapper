@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, BaseWindow } from 'electron';
 import { writeFileSync, readFileSync } from 'node:fs';
 import type { createStore } from './services/store';
 import type { ConnectionManager } from './services/connections';
@@ -37,4 +37,18 @@ export function registerIpc(store: Store, connections: ConnectionManager): void 
     if (response === 2) return;
     store.applyImport(bundle, response === 1 ? 'replace' : 'merge');
   });
+}
+
+export interface RailHandlers {
+  onBack?: () => void;
+  onDisconnect?: () => void;
+}
+
+/** Window-control + rail-nav IPC. `handlers` lets main.ts wire rail nav (Task 11 hooks it to connections.disconnect()). */
+export function registerWindowIpc(win: BaseWindow, handlers: RailHandlers = {}): void {
+  ipcMain.on('win:min', () => win.minimize());
+  ipcMain.on('win:max', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
+  ipcMain.on('win:close', () => win.close());
+  ipcMain.on('rail:back', () => handlers.onBack?.());
+  ipcMain.on('rail:disconnect', () => handlers.onDisconnect?.());
 }

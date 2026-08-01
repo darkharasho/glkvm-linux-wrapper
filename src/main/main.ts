@@ -5,10 +5,11 @@ import { createConnectionManager } from './services/connections';
 import { installCertHandler } from './services/certs';
 import { createLogger } from './services/logger';
 import { initUpdater } from './services/updater';
-import { registerIpc } from './ipc';
+import { registerIpc, registerWindowIpc } from './ipc';
 
 app.whenReady().then(() => {
-  const { window, dashboard } = createMainWindow();
+  const { window, dashboard, layout } = createMainWindow();
+  layout.setRail({ mode: 'idle' });
 
   // Defense-in-depth CSP for the dashboard UI only (packaged builds only — a strict CSP would
   // break Vite HMR in `npm run dev`). Scoped to the default session, which the dashboard's
@@ -60,6 +61,10 @@ app.whenReady().then(() => {
   });
 
   registerIpc(store, connections);
+  registerWindowIpc(window, {
+    onBack: () => connections.disconnect(),
+    onDisconnect: () => connections.disconnect(),
+  });
 
   app.on('activate', () => { /* re-create on macOS dock click */ });
 });

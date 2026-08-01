@@ -34,12 +34,15 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     if (t) { clearTimeout(t); watchdogs.delete(id); }
   }
 
-  // Measure the remote's natural content size at 1:1 (called right after a fresh
-  // load, when zoomFactor is 1). Uses a double rAF so layout has settled.
+  // Measure the remote's natural content size at 1:1 (called right after a fresh load).
+  // A cached view reconnecting via Back may still be at its previously-applied zoom, so
+  // force zoom back to 1 before measuring — Chromium page-zoom inflates scrollWidth/Height.
+  // Uses a double rAF so layout has settled after the zoom reset.
   async function measureNatural(id: string): Promise<void> {
     const v = views.get(id);
     if (!v || v.webContents.isDestroyed()) return;
     try {
+      if (v.webContents.getZoomFactor() !== 1) v.webContents.setZoomFactor(1); // measure at true 1:1
       const m = await v.webContents.executeJavaScript(
         'new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => res({' +
         ' w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }))))'
@@ -98,6 +101,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
       views.delete(targetId);
     }
     loaded.delete(targetId);
+    naturalSize.delete(targetId);
     if (active === targetId) active = null;
     if (target === targetId) target = null;
     deps.layout.setActiveDeviceView(null);

@@ -2,7 +2,11 @@ import type { Device } from '@shared/types';
 import { openDeviceDialog } from './deviceDialog';
 import { osIcon } from './osicon';
 
+let connectedIds = new Set<string>();
+let mountedRoot: HTMLElement | null = null;
+
 export async function renderDashboard(root: HTMLElement): Promise<void> {
+  mountedRoot = root;
   const devices = await window.glkvm.listDevices();
   root.innerHTML = `
     <header class="topbar">
@@ -22,6 +26,27 @@ export async function renderDashboard(root: HTMLElement): Promise<void> {
     window.dispatchEvent(new CustomEvent('open-settings'));
 }
 
+/** Updates the live "Connected"/"Idle" status set and, if the dashboard is currently mounted,
+ * patches each row's status pill in place (no full re-render). */
+export function setConnectedDevices(ids: string[]): void {
+  connectedIds = new Set(ids);
+  if (!mountedRoot) return;
+  const list = mountedRoot.querySelector('#list');
+  if (!list) return;
+  list.querySelectorAll<HTMLElement>('.row').forEach((row) => {
+    const id = row.dataset.id;
+    if (!id) return;
+    applyStatus(row, connectedIds.has(id));
+  });
+}
+
+function applyStatus(row: HTMLElement, connected: boolean): void {
+  const st = row.querySelector('.st') as HTMLElement | null;
+  const lbl = row.querySelector('.lbl') as HTMLElement | null;
+  if (st) st.classList.toggle('on', connected);
+  if (lbl) lbl.textContent = connected ? 'Connected' : 'Idle';
+}
+
 function rowFor(root: HTMLElement, d: Device): HTMLElement {
   const el = document.createElement('button');
   el.className = 'row'; el.dataset.id = d.id;
@@ -32,7 +57,7 @@ function rowFor(root: HTMLElement, d: Device): HTMLElement {
     <span class="chev">›</span>`;
   (el.querySelector('.nm') as HTMLElement).textContent = d.name;
   (el.querySelector('.addr') as HTMLElement).textContent = d.address;
-  (el.querySelector('.lbl') as HTMLElement).textContent = 'Idle';
+  applyStatus(el, connectedIds.has(d.id));
   el.addEventListener('click', () => window.glkvm.connect(d.id));
   el.addEventListener('contextmenu', (e) => { e.preventDefault();
     openDeviceDialog({ device: d, onSave: async (i) => { await window.glkvm.updateDevice(d.id, i); await renderDashboard(root); } }); });

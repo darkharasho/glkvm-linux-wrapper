@@ -6,7 +6,8 @@ type Store = ReturnType<typeof createStore>;
 
 export interface ConnectionManager {
   connect(id: string): Promise<void>;
-  disconnect(): Promise<void>;
+  disconnect(id?: string): Promise<void>;
+  background(): void;
   activeDeviceId(): string | null;
 }
 
@@ -16,11 +17,13 @@ interface Deps {
   store: Store;
   layout: LayoutController;
   onState: (s: { deviceId: string | null; state: 'loading' | 'ready' | 'error'; message?: string }) => void;
+  onConnectedChange?: (ids: string[]) => void;
 }
 
 export function createConnectionManager(deps: Deps): ConnectionManager {
   const views = new Map<string, WebContentsView>();
   const watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
+  const loaded = new Set<string>();
   let active: string | null = null; // device currently attached/shown (set only on success)
   let target: string | null = null; // device the user currently intends to view (set as soon as connect() is called)
 
@@ -29,10 +32,15 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     if (t) { clearTimeout(t); watchdogs.delete(id); }
   }
 
-  function showDashboard() {
+  // "Back" — return to the dashboard but keep the active device's session live in the
+  // background (view stays cached in `views`/`loaded`) so its dashboard row can show
+  // "Connected" and re-clicking it resumes instantly instead of reloading.
+  function background(): void {
     if (target) clearWatchdog(target);
-    if (active) clearWatchdog(active);
-    if (active && views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
+    if (active) {
+      clearWatchdog(active);
+      if (views.has(active)) deps.window.contentView.removeChildView(views.get(active)!);
+    }
     active = null;
     target = null;
     deps.layout.setActiveDeviceView(null);
@@ -40,8 +48,35 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     deps.onState({ deviceId: null, state: 'ready' });
   }
 
+  // "Disconnect" — end the live session for a device (defaults to the active one): detach +
+  // destroy its view/webContents, drop it from `views`/`loaded`, and clear its watchdog.
+  async function disconnect(id?: string): Promise<void> {
+    const targetId = id ?? active;
+    if (!targetId) {
+      // Nothing active to end; still clear any in-flight target so a pending connect settles.
+      if (target) clearWatchdog(target);
+      target = null;
+      return;
+    }
+    clearWatchdog(targetId);
+    const view = views.get(targetId);
+    if (view) {
+      deps.window.contentView.removeChildView(view); // safe no-op if not currently attached
+      try { view.webContents.close(); } catch { /* already closed/destroyed */ }
+      views.delete(targetId);
+    }
+    loaded.delete(targetId);
+    if (active === targetId) active = null;
+    if (target === targetId) target = null;
+    deps.layout.setActiveDeviceView(null);
+    deps.layout.relayout();
+    deps.onState({ deviceId: null, state: 'ready' });
+    deps.onConnectedChange?.([...loaded]);
+  }
+
   return {
     activeDeviceId: () => active,
+    background,
     async connect(id: string) {
       const device = deps.store.getDevices().find(d => d.id === id);
       if (!device) return;
@@ -75,7 +110,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           },
         });
         attachKeyboard(newView.webContents, () => deps.store.getSettings(), (appAction) => {
-          if (appAction === 'back-to-dashboard' || appAction === 'release') showDashboard();
+          if (appAction === 'back-to-dashboard' || appAction === 'release') background();
           // next/prev/fullscreen/open-settings handled here or forwarded to renderer
         });
         // Harden the remote KVM page against opening arbitrary windows or navigating away from
@@ -93,13 +128,17 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           }
         });
         newView.webContents.on('did-finish-load', () => {
-          if (target !== id) return; // superseded by a later connect()/showDashboard() — ignore
+          if (target !== id) return; // superseded by a later connect()/background() — ignore
           clearWatchdog(id);
           deps.window.contentView.addChildView(newView);
           deps.layout.setActiveDeviceView(newView);
           deps.layout.relayout();
           active = id;
           deps.onState({ deviceId: id, state: 'ready' });
+          if (!loaded.has(id)) {
+            loaded.add(id);
+            deps.onConnectedChange?.([...loaded]);
+          }
         });
         newView.webContents.on('did-fail-load', (_e, code, desc) => {
           if (code === -3) return; // aborted, ignore
@@ -127,6 +166,6 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
         // handled via did-fail-load
       }
     },
-    async disconnect() { showDashboard(); },
+    disconnect,
   };
 }

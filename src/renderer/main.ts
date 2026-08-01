@@ -4,7 +4,7 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
-import { renderDashboard } from './dashboard';
+import { renderDashboard, setConnectedDevices } from './dashboard';
 import { openSettings } from './settingsPanel';
 import { showOverlay, hideOverlay } from './overlay';
 import { openModal } from './modal';
@@ -17,6 +17,7 @@ const root = document.querySelector('#app') as HTMLElement;
 renderDashboard(root);
 window.addEventListener('open-settings', () => openSettings(root, () => renderDashboard(root)));
 window.glkvm.onNavigate((view) => { if (view === 'dashboard') renderDashboard(root); });
+window.glkvm.onConnectedDevices((ids) => setConnectedDevices(ids));
 
 let lastDeviceId: string | null = null;
 window.glkvm.onConnectionState((s) => {

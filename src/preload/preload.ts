@@ -13,6 +13,7 @@ const api: GlkvmApi = {
   exportBackup: () => ipcRenderer.invoke('backup:export'),
   importBackup: () => ipcRenderer.invoke('backup:import'),
   onConnectionState: (cb) => { ipcRenderer.on('conn:state', (_e, s) => cb(s)); },
+  onConnectedDevices: (cb) => { ipcRenderer.on('devices:connected', (_e, ids) => cb(ids)); },
   onNavigate: (cb) => { ipcRenderer.on('nav:view', (_e, v) => cb(v)); },
   onModalShow: (cb) => { ipcRenderer.on('modal:show', (_e, spec) => cb(spec)); },
   modalDone: (id, value) => { ipcRenderer.send('modal:done', { id, value }); },

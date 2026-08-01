@@ -63,6 +63,7 @@ app.whenReady().then(() => {
         ? { mode: 'connected', deviceName: dev.name, captureOn: true }
         : { mode: 'idle' });
     },
+    onConnectedChange: (ids) => dashboard.webContents.send('devices:connected', ids),
   });
 
   // The renderer only displays the host/fingerprint and returns 'trust'/'cancel'; main remains
@@ -74,7 +75,7 @@ app.whenReady().then(() => {
 
   registerIpc(store, connections, bridge);
   registerWindowIpc(window, {
-    onBack: () => connections.disconnect(),
+    onBack: () => connections.background(),
     onDisconnect: () => connections.disconnect(),
   });
 

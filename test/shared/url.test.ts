@@ -3,12 +3,12 @@ import { normalizeAddress, isValidAddress, toDeviceUrl } from '@shared/url';
 
 describe('normalizeAddress', () => {
   it('strips scheme, path, and trailing slash', () => {
-    expect(normalizeAddress('https://workmac.local/')).toBe('workmac.local');
-    expect(normalizeAddress('http://WorkMac.local/ui')).toBe('workmac.local');
-    expect(normalizeAddress('  workmac.local  ')).toBe('workmac.local');
+    expect(normalizeAddress('https://mypc.local/')).toBe('mypc.local');
+    expect(normalizeAddress('http://MyPC.local/ui')).toBe('mypc.local');
+    expect(normalizeAddress('  mypc.local  ')).toBe('mypc.local');
   });
   it('keeps an explicit port', () => {
-    expect(normalizeAddress('workmac.local:8443')).toBe('workmac.local:8443');
+    expect(normalizeAddress('mypc.local:8443')).toBe('mypc.local:8443');
   });
   it('rejects empty or whitespace input', () => {
     expect(() => normalizeAddress('   ')).toThrow();
@@ -18,12 +18,12 @@ describe('normalizeAddress', () => {
 describe('isValidAddress', () => {
   it('is false for empty, true for a host', () => {
     expect(isValidAddress('')).toBe(false);
-    expect(isValidAddress('workmac.local')).toBe(true);
+    expect(isValidAddress('mypc.local')).toBe(true);
   });
 });
 
 describe('toDeviceUrl', () => {
   it('always produces an https url', () => {
-    expect(toDeviceUrl('workmac.local')).toBe('https://workmac.local');
+    expect(toDeviceUrl('mypc.local')).toBe('https://mypc.local');
   });
 });

@@ -11,7 +11,7 @@ describe('defaults', () => {
 describe('validateDevices', () => {
   it('keeps well-formed devices and drops malformed ones', () => {
     const out = validateDevices([
-      { id: 'a', name: 'Work', address: 'workmac.local', url: 'https://workmac.local', createdAt: 1 },
+      { id: 'a', name: 'Work', address: '192.168.1.42', url: 'https://192.168.1.42', createdAt: 1 },
       { id: 'b' }, // missing fields -> dropped
       'garbage',
     ]);
@@ -23,7 +23,7 @@ describe('validateDevices', () => {
   });
   it('drops a device with an invalid (non-hex) color', () => {
     const out = validateDevices([
-      { id: 'a', name: 'Work', address: 'workmac.local', url: 'https://workmac.local', createdAt: 1, color: 'url(https://evil.example/x.png)' },
+      { id: 'a', name: 'Work', address: 'example-host.local', url: 'https://example-host.local', createdAt: 1, color: 'url(https://evil.example/x.png)' },
       { id: 'b', name: 'Home', address: 'home.local', url: 'https://home.local', createdAt: 2, color: '#1f6feb' },
     ]);
     expect(out).toHaveLength(1);

@@ -7,7 +7,8 @@
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .mono{font-family:'JetBrains Mono',monospace}
-#app{min-height:100vh;display:flex;flex-direction:column}
+#app{min-height:100vh;display:flex;flex-direction:column;padding:0 24px}
+.wrap{width:100%;max-width:760px;margin:0 auto}
 
 button{font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink);
   background:transparent;border:1px solid var(--line2);border-radius:8px;padding:9px 14px;cursor:pointer}
@@ -17,11 +18,11 @@ button.pri:hover{filter:brightness(.92)}
 button.danger:hover{color:#ff6b6b;border-color:#3a2626;background:transparent}
 
 /* dashboard */
-.topbar{display:flex;align-items:flex-end;justify-content:space-between;padding:30px 34px 22px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;width:100%;max-width:760px;margin:0 auto;padding:26px 0 18px}
 .topbar h1{font-size:24px;font-weight:600;letter-spacing:-.02em;margin:0}
 .topbar .sub{color:var(--mut);font-size:13px;margin-top:5px}
 .topbar .actions{display:flex;gap:10px}
-.list{margin:0 34px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.list{width:100%;max-width:760px;margin:0 auto 40px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .row{display:flex;align-items:center;gap:15px;padding:15px 18px;border-bottom:1px solid var(--line);
   width:100%;text-align:left;background:transparent;border-radius:0;cursor:pointer}
 .row:last-child{border-bottom:none}
@@ -37,7 +38,7 @@ button.danger:hover{color:#ff6b6b;border-color:#3a2626;background:transparent}
 .row .st.on .dot{background:var(--ok)}
 .row .st.on{color:var(--ok)}
 .row .chev{color:#4b4b52;font-size:15px}
-.empty{color:var(--mut);padding:40px;text-align:center}
+.empty{color:var(--mut);padding:56px 40px;text-align:center;width:100%;max-width:760px;margin:0 auto;border:1px solid var(--line);border-radius:12px}
 
 /* modal component */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);

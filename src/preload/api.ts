@@ -1,9 +1,9 @@
-import type { Device, Settings } from '@shared/types';
+import type { Device, OsKind, Settings } from '@shared/types';
 
 export interface GlkvmApi {
   listDevices(): Promise<Device[]>;
-  addDevice(input: { name: string; address: string; color?: string }): Promise<Device>;
-  updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color'>>): Promise<Device | null>;
+  addDevice(input: { name: string; address: string; color?: string; os?: OsKind }): Promise<Device>;
+  updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color' | 'os'>>): Promise<Device | null>;
   removeDevice(id: string): Promise<void>;
   getSettings(): Promise<Settings>;
   setSettings(next: Settings): Promise<void>;

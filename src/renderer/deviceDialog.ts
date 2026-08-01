@@ -11,10 +11,18 @@ interface DialogOpts {
 const SWATCHES = ['#34d399', '#e5e7eb', '#f4a13a', '#a78bfa', '#f472b6'];
 
 export function openDeviceDialog(opts: DialogOpts): void {
-  let name = opts.device?.name ?? '';
-  let address = opts.device?.address ?? '';
-  let os: OsKind = opts.device?.os ?? 'generic';
-  let color = opts.device?.color ?? '#34d399';
+  const name0 = opts.device?.name ?? '';
+  const address0 = opts.device?.address ?? '';
+  const os0: OsKind = opts.device?.os ?? 'generic';
+  const color0 = opts.device?.color ?? '#34d399';
+  runDialog(opts, name0, address0, os0, color0);
+}
+
+function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKind, color0: string): void {
+  let name = name0;
+  let address = address0;
+  let os: OsKind = os0;
+  let color = color0;
 
   openModal({
     title: opts.device ? 'Edit device' : 'Add device',
@@ -63,6 +71,14 @@ export function openDeviceDialog(opts: DialogOpts): void {
     },
   }).then(async (v) => {
     if (v !== 'save') return;
-    await opts.onSave({ name, address, color, os });
+    if (!name.trim() || !address.trim()) {
+      runDialog(opts, name, address, os, color);
+      return;
+    }
+    try {
+      await opts.onSave({ name, address, color, os });
+    } catch {
+      runDialog(opts, name, address, os, color);
+    }
   });
 }

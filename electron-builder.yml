@@ -11,6 +11,26 @@ linux:
   category: Utility
   icon: build/icon.png
   maintainer: darkharasho
+mac:
+  target:
+    - dmg
+    - zip            # zip is required for electron-updater on macOS
+  category: public.app-category.utilities
+  icon: build/icon.png
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: true      # notarizes when APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID env are present; skips (with a warning) when unsigned
+win:
+  target:
+    - nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-Setup.${ext}
 publish:
   provider: github
   owner: darkharasho

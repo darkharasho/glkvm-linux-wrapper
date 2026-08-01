@@ -23,6 +23,8 @@ A cross-platform (Linux-first) Electron desktop app that wraps the GL.iNet KVM (
    ./GLKVM-*.AppImage
    ```
 
+Installers for other platforms are also available on the [Releases](../../releases) page: Windows (`GLKVM-*-Setup.exe`) and macOS (`.dmg`). The macOS build is signed and notarized when signing secrets are configured for the release; otherwise it's unsigned — right-click the app and choose Open on first launch to bypass Gatekeeper.
+
 ## First run / usage
 
 1. On first launch you'll see an empty dashboard. Add a device using its local address (e.g. `mypc.local`).

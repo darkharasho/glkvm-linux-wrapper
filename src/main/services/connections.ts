@@ -44,8 +44,16 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
     try {
       if (v.webContents.getZoomFactor() !== 1) v.webContents.setZoomFactor(1); // measure at true 1:1
       const m = await v.webContents.executeJavaScript(
-        'new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => res({' +
-        ' w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }))))'
+        'new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => {' +
+        '  let best = null, area = -1;' +
+        '  for (const el of document.querySelectorAll("video, canvas")) {' +
+        '    const w = el.videoWidth || el.width || Math.round(el.getBoundingClientRect().width);' +
+        '    const h = el.videoHeight || el.height || Math.round(el.getBoundingClientRect().height);' +
+        '    if (w > 0 && h > 0 && w * h > area) { area = w * h; best = { w, h }; }' +
+        '  }' +
+        '  if (!best) best = { w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight };' +
+        '  res(best);' +
+        '})))'
       );
       if (m && m.w > 0 && m.h > 0) naturalSize.set(id, { w: m.w, h: m.h });
     } catch { /* page not ready / navigating */ }
@@ -150,7 +158,8 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           () => deps.store.getSettings(),
           (appAction) => {
             if (appAction === 'back-to-dashboard' || appAction === 'release') background();
-            // next/prev/fullscreen/open-settings handled here or forwarded to renderer
+            else if (appAction === 'toggle-fullscreen') deps.window.setFullScreen(!deps.window.isFullScreen());
+            // next/prev/open-settings handled here or forwarded to renderer
           },
           () => deps.store.getDevices().find((d) => d.id === id)?.os ?? 'generic',
         );

@@ -88,6 +88,7 @@ export function createMainWindow(): {
   // the outer bounds and relayout when they actually change. Cheap (two int compares)
   // and only does work on an actual size change.
   const sizePoll = setInterval(() => {
+    if (win.isDestroyed()) return;
     const b = win.getBounds();
     if (b.width !== lastW || b.height !== lastH) relayout();
   }, 250);

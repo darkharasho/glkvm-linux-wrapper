@@ -28,3 +28,16 @@ export function resolveAction(input: KeyInput, bindings: HotkeyBinding[]): Hotke
   const match = bindings.find(b => b.accelerator === accel);
   return match ? match.action : 'remote';
 }
+
+const MAC_CMD_KEYS = new Set(['c', 'v', 'x', 'a', 'z', 's', 'f']);
+
+/** For a macOS target, map a Ctrl+<key> editing chord to its Cmd(meta) equivalent.
+ *  Returns the injected keyCode + modifiers, or null if this input should pass through unchanged. */
+export function macCmdRemap(input: KeyInput): { keyCode: string; modifiers: Array<'meta' | 'shift'> } | null {
+  if (!input.control || input.meta || input.alt) return null;   // only plain Ctrl+<key> (not Ctrl+Alt, not already-meta)
+  const k = input.key.length === 1 ? input.key.toLowerCase() : '';
+  if (!MAC_CMD_KEYS.has(k)) return null;
+  const modifiers: Array<'meta' | 'shift'> = ['meta'];
+  if (input.shift) modifiers.push('shift');
+  return { keyCode: k, modifiers };
+}

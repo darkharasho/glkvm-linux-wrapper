@@ -109,10 +109,15 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
             contextIsolation: true, nodeIntegration: false,
           },
         });
-        attachKeyboard(newView.webContents, () => deps.store.getSettings(), (appAction) => {
-          if (appAction === 'back-to-dashboard' || appAction === 'release') background();
-          // next/prev/fullscreen/open-settings handled here or forwarded to renderer
-        });
+        attachKeyboard(
+          newView.webContents,
+          () => deps.store.getSettings(),
+          (appAction) => {
+            if (appAction === 'back-to-dashboard' || appAction === 'release') background();
+            // next/prev/fullscreen/open-settings handled here or forwarded to renderer
+          },
+          () => deps.store.getDevices().find((d) => d.id === id)?.os ?? 'generic',
+        );
         // Harden the remote KVM page against opening arbitrary windows or navigating away from
         // its own origin (defense-in-depth against a malicious/compromised device page). The
         // allowed origin is fixed to the device's own URL at creation time — using getURL() here

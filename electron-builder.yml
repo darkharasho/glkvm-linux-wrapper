@@ -6,6 +6,11 @@ directories:
 files:
   - out/**/*
   - package.json
+# Ship the PNG into resources/ so the main process can set the Linux window icon
+# (_NET_WM_ICON) at runtime — see appIconPath() in src/main/window.ts.
+extraResources:
+  - from: build/icons/256x256.png
+    to: icon.png
 linux:
   target: [AppImage]
   category: Utility

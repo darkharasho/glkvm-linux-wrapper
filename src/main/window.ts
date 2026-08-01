@@ -1,6 +1,16 @@
-import { BaseWindow, WebContentsView } from 'electron';
+import { BaseWindow, WebContentsView, app } from 'electron';
 import { join } from 'node:path';
 import { RAIL_H, railArea, contentArea } from './layout';
+
+// On Linux the taskbar/window icon comes from the window's _NET_WM_ICON, which
+// Electron only sets when we pass an icon (Windows/macOS use the packaged icon
+// instead). The PNG is shipped as an extraResource when packaged, and lives in
+// build/ during dev.
+function appIconPath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(__dirname, '../../build/icons/256x256.png');
+}
 
 export interface RailState {
   mode: 'idle' | 'connected';
@@ -27,6 +37,7 @@ export function createMainWindow(): {
     title: 'GLKVM',
     frame: false,
     backgroundColor: '#0c0c0d',
+    icon: appIconPath(),
   });
 
   const mk = (preload: string) =>

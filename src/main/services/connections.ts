@@ -193,6 +193,16 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
         });
         newView.webContents.on('did-finish-load', () => {
           if (target !== id) return; // superseded by a later connect()/background() — ignore
+          // Defensive: only attach a view whose committed page is actually the device's own
+          // origin. A blank/error interstitial (e.g. chrome-error:// from a rejected cert) also
+          // fires did-finish-load; attaching it would cover the dashboard with a white screen and
+          // hide the cert-trust prompt. Keep the overlay and surface an error instead.
+          const loadedOrigin = (() => { try { return new URL(newView.webContents.getURL()).origin; } catch { return null; } })();
+          if (!deviceOrigin || loadedOrigin !== deviceOrigin) {
+            clearWatchdog(id);
+            deps.onState({ deviceId: id, state: 'error', message: 'Failed to load device page' });
+            return;
+          }
           clearWatchdog(id);
           deps.window.contentView.addChildView(newView);
           deps.layout.setActiveDeviceView(newView);

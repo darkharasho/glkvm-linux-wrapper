@@ -11,6 +11,7 @@ export interface ConnectionManager {
   disconnect(id?: string): Promise<void>;
   background(): void;
   activeDeviceId(): string | null;
+  resetAutofill(deviceId: string): void;
 }
 
 interface Deps {
@@ -29,6 +30,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   const watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
   const loaded = new Set<string>();
   const autofillStates = new Map<string, AutofillState>();
+  const autofillInFlight = new Set<string>();
   let active: string | null = null; // device currently attached/shown (set only on success)
   let target: string | null = null; // device the user currently intends to view (set as soon as connect() is called)
   const naturalSize = new Map<string, { w: number; h: number }>(); // remote content size (device px @ zoom 1)
@@ -127,6 +129,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   return {
     activeDeviceId: () => active,
     background,
+    resetAutofill(deviceId: string) { autofillStates.delete(deviceId); },
     async connect(id: string) {
       const device = deps.store.getDevices().find(d => d.id === id);
       if (!device) return;
@@ -197,14 +200,20 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           }
           void measureNatural(id).then(() => applyFit(id));
           // Attempt login autofill for this device (no-op if no saved password or already logged in).
-          let af = autofillStates.get(id);
-          if (!af) { af = { submittedThisSession: false }; autofillStates.set(id, af); }
-          void runAutofill({
-            runJs: (code) => newView.webContents.executeJavaScript(code),
-            getPassword: () => deps.secrets.get(id),
-            notifyFailure: () => deps.onAutofillFailed?.(id),
-            delay: (ms) => new Promise((r) => setTimeout(r, ms)),
-          }, af);
+          // Guard against a concurrent run for the same device (e.g. a real login navigation
+          // re-firing did-finish-load while the previous fill-and-submit's fail-window is still
+          // pending) — otherwise both runs could call notifyFailure() for one failed login.
+          if (!autofillInFlight.has(id)) {
+            let af = autofillStates.get(id);
+            if (!af) { af = { submittedThisSession: false }; autofillStates.set(id, af); }
+            autofillInFlight.add(id);
+            void runAutofill({
+              runJs: (code) => newView.webContents.executeJavaScript(code),
+              getPassword: () => deps.secrets.get(id),
+              notifyFailure: () => deps.onAutofillFailed?.(id),
+              delay: (ms) => new Promise((r) => setTimeout(r, ms)),
+            }, af).finally(() => { autofillInFlight.delete(id); });
+          }
         });
         newView.webContents.on('did-fail-load', (_e, code, desc) => {
           if (code === -3) return; // aborted, ignore

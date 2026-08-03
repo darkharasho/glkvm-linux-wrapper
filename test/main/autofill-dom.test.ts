@@ -60,6 +60,21 @@ describe('autofill fill', () => {
     document.body.innerHTML = `<input type="text">`;
     expect(fillLogin('s3cret', true)).toBe(false);
   });
+
+  it('fills the visible password input, skipping a hidden one that precedes it in the DOM', () => {
+    document.body.innerHTML = `
+      <input type="password" id="hidden" style="display:none">
+      <input type="password" id="visible">
+    `;
+    const hidden = document.getElementById('hidden') as HTMLInputElement;
+    const visible = document.getElementById('visible') as HTMLInputElement;
+    // hidden stays zero-rect (jsdom default); make the second one visible
+    makeVisible(visible);
+
+    expect(fillLogin('s3cret', false)).toBe(true);
+    expect(visible.value).toBe('s3cret');
+    expect(hidden.value).toBe('');
+  });
 });
 
 describe('injectable code builders', () => {

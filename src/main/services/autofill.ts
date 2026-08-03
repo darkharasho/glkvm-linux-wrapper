@@ -18,7 +18,14 @@ export function hasVisiblePasswordField(): boolean {
  * (React/Vue) register the change.
  */
 export function fillLogin(password: string, submit: boolean): boolean {
-  const input = document.querySelector('input[type="password"]') as HTMLInputElement | null;
+  const candidates = Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[];
+  const visible = candidates.find((el) => {
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+  const input = visible ?? candidates[0] ?? null;
   if (!input) return false;
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
   if (setter) setter.call(input, password); else input.value = password;

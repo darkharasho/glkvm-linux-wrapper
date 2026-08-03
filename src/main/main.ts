@@ -82,7 +82,7 @@ app.whenReady().then(() => {
   const promptTrust = async (host: string, fingerprint: string): Promise<boolean> =>
     (await bridge.request({ kind: 'cert-trust', host, fingerprint })) === 'trust';
 
-  installCertHandler(store, promptTrust);
+  installCertHandler(store, promptTrust, logger);
 
   registerIpc(store, connections, bridge, secrets);
   registerWindowIpc(window, {

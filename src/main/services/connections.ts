@@ -2,6 +2,8 @@ import { BaseWindow, WebContentsView, session } from 'electron';
 import type { createStore } from './store';
 import { attachKeyboard } from './keyboard';
 import type { LayoutController } from '../window';
+import { runAutofill, type AutofillState } from './autofill';
+import type { SecretsStore } from './secrets';
 type Store = ReturnType<typeof createStore>;
 
 export interface ConnectionManager {
@@ -15,6 +17,8 @@ interface Deps {
   window: BaseWindow;
   dashboard: WebContentsView;
   store: Store;
+  secrets: SecretsStore;
+  onAutofillFailed?: (deviceId: string) => void;
   layout: LayoutController;
   onState: (s: { deviceId: string | null; state: 'loading' | 'ready' | 'error'; message?: string }) => void;
   onConnectedChange?: (ids: string[]) => void;
@@ -24,6 +28,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
   const views = new Map<string, WebContentsView>();
   const watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
   const loaded = new Set<string>();
+  const autofillStates = new Map<string, AutofillState>();
   let active: string | null = null; // device currently attached/shown (set only on success)
   let target: string | null = null; // device the user currently intends to view (set as soon as connect() is called)
   const naturalSize = new Map<string, { w: number; h: number }>(); // remote content size (device px @ zoom 1)
@@ -109,6 +114,7 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
       views.delete(targetId);
     }
     loaded.delete(targetId);
+    autofillStates.delete(targetId);
     naturalSize.delete(targetId);
     if (active === targetId) active = null;
     if (target === targetId) target = null;
@@ -190,6 +196,15 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
             deps.onConnectedChange?.([...loaded]);
           }
           void measureNatural(id).then(() => applyFit(id));
+          // Attempt login autofill for this device (no-op if no saved password or already logged in).
+          let af = autofillStates.get(id);
+          if (!af) { af = { submittedThisSession: false }; autofillStates.set(id, af); }
+          void runAutofill({
+            runJs: (code) => newView.webContents.executeJavaScript(code),
+            getPassword: () => deps.secrets.get(id),
+            notifyFailure: () => deps.onAutofillFailed?.(id),
+            delay: (ms) => new Promise((r) => setTimeout(r, ms)),
+          }, af);
         });
         newView.webContents.on('did-fail-load', (_e, code, desc) => {
           if (code === -3) return; // aborted, ignore

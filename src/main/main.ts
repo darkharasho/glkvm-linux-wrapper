@@ -84,7 +84,7 @@ app.whenReady().then(() => {
 
   installCertHandler(store, promptTrust);
 
-  registerIpc(store, connections, bridge);
+  registerIpc(store, connections, bridge, secrets);
   registerWindowIpc(window, {
     onBack: () => connections.background(),
     onDisconnect: () => connections.disconnect(),

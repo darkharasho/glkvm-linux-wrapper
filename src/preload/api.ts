@@ -5,6 +5,10 @@ export interface GlkvmApi {
   addDevice(input: { name: string; address: string; color?: string; os?: OsKind }): Promise<Device>;
   updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color' | 'os'>>): Promise<Device | null>;
   removeDevice(id: string): Promise<void>;
+  setPassword(id: string, password: string): Promise<boolean>;
+  hasPassword(id: string): Promise<boolean>;
+  clearPassword(id: string): Promise<void>;
+  secretsAvailable(): Promise<boolean>;
   getSettings(): Promise<Settings>;
   setSettings(next: Settings): Promise<void>;
   connect(id: string): Promise<void>;

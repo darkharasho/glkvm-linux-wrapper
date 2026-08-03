@@ -5,7 +5,13 @@ import { osIcon } from './osicon';
 
 interface DialogOpts {
   device?: Device;
-  onSave: (input: { name: string; address: string; color?: string; os: OsKind }) => Promise<void>;
+  hasSavedPassword?: boolean;
+  secretsAvailable?: boolean;
+  onSave: (input: {
+    name: string; address: string; color?: string; os: OsKind;
+    password?: string;        // new/replacement plaintext, if the user typed one
+    clearPassword?: boolean;  // user cleared an existing saved password
+  }) => Promise<void>;
 }
 
 const SWATCHES = ['#34d399', '#e5e7eb', '#f4a13a', '#a78bfa', '#f472b6'];
@@ -23,6 +29,9 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
   let address = address0;
   let os: OsKind = os0;
   let color = color0;
+  let password: string | undefined;              // set only if the user types one
+  let clearedSaved = false;                       // user hit "Clear" on an existing saved password
+  const available = opts.secretsAvailable !== false;
 
   openModal({
     title: opts.device ? 'Edit device' : 'Add device',
@@ -36,7 +45,8 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
         <div class="fld"><label>Name</label><input name="name" placeholder="Design Mac"></div>
         <div class="fld"><label>Address</label><input name="address" class="mono" placeholder="mypc.local"></div>
         <div class="fld"><label>System</label><div class="seg" id="os"></div></div>
-        <div class="fld"><label>Accent</label><div class="swatches" id="sw"></div></div>`;
+        <div class="fld"><label>Accent</label><div class="swatches" id="sw"></div></div>
+        <div class="fld"><label>Login password</label><div id="pw"></div></div>`;
 
       const nameInput = body.querySelector('[name=name]') as HTMLInputElement;
       const addressInput = body.querySelector('[name=address]') as HTMLInputElement;
@@ -68,6 +78,24 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
         };
         sw.appendChild(s);
       });
+
+      const pw = body.querySelector('#pw') as HTMLElement;
+      const renderPw = () => {
+        if (!available) {
+          pw.innerHTML = `<div class="hint">Secure storage unavailable — autofill disabled.</div>`;
+          return;
+        }
+        if (opts.hasSavedPassword && !clearedSaved && password === undefined) {
+          pw.innerHTML = `<div class="saved">Password saved <button type="button" class="link" id="pw-clear">Clear</button></div>`;
+          (pw.querySelector('#pw-clear') as HTMLElement).onclick = () => { clearedSaved = true; renderPw(); };
+        } else {
+          pw.innerHTML = `<input name="password" type="password" placeholder="Optional — used for autofill">`;
+          const inp = pw.querySelector('[name=password]') as HTMLInputElement;
+          inp.value = password ?? '';
+          inp.addEventListener('input', () => { password = inp.value || undefined; });
+        }
+      };
+      renderPw();
     },
   }).then(async (v) => {
     if (v !== 'save') return;
@@ -76,7 +104,11 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
       return;
     }
     try {
-      await opts.onSave({ name, address, color, os });
+      await opts.onSave({
+        name, address, color, os,
+        password,
+        clearPassword: clearedSaved && !password,
+      });
     } catch {
       runDialog(opts, name, address, os, color);
     }

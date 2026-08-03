@@ -66,6 +66,9 @@ button.danger:hover{color:#ff6b6b;border-color:#3a2626;background:transparent}
 .fp{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--mut);background:var(--bg);
   border:1px solid var(--line2);border-radius:8px;padding:11px 12px;word-break:break-all;line-height:1.5}
 .fp .k{color:var(--dim)}
+.fld .hint { font-size: 12px; opacity: 0.6; }
+.fld .saved { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.fld .link { background: none; border: none; color: #f472b6; cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
 
 /* settings + hotkeys (restyled) */
 dialog.settings-panel{padding:0;margin:auto;width:640px;max-width:calc(100vw - 60px);
@@ -102,3 +105,5 @@ dialog.settings-panel .mf{display:flex;justify-content:flex-end;gap:9px;padding:
 .overlay menu{display:flex;gap:9px;justify-content:center;margin:16px 0 0;padding:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.overlay .spinner{animation:none}}
+
+.keymark { font-size: 11px; opacity: 0.6; margin-left: 6px; }

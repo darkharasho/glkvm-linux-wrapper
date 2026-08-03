@@ -1,4 +1,4 @@
-import { app, session } from 'electron';
+import { app, session, safeStorage } from 'electron';
 import { createMainWindow } from './window';
 import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
@@ -7,6 +7,7 @@ import { createLogger } from './services/logger';
 import { initUpdater } from './services/updater';
 import { registerIpc, registerWindowIpc } from './ipc';
 import { createModalBridge } from './modal-bridge';
+import { createSecretsStore } from './services/secrets';
 
 app.whenReady().then(() => {
   const { window, dashboard, titlebar, layout } = createMainWindow();
@@ -40,6 +41,7 @@ app.whenReady().then(() => {
     });
   }
   const store = createStore(app.getPath('userData'));
+  const secrets = createSecretsStore(app.getPath('userData'), safeStorage);
   const logger = createLogger(app.getPath('logs'));
   logger.info('app ready');
 
@@ -53,6 +55,15 @@ app.whenReady().then(() => {
     window,
     dashboard,
     store,
+    secrets,
+    onAutofillFailed: (deviceId) => {
+      const dev = store.getDevices().find((d) => d.id === deviceId);
+      logger.error(`autofill sign-in failed for ${dev?.name ?? deviceId}`);
+      void bridge.request({
+        kind: 'alert',
+        message: `Autofill couldn't sign in to ${dev?.name ?? 'the device'}. Check the saved password in its settings.`,
+      });
+    },
     layout,
     onState: (s) => {
       if (s.state === 'error') logger.error(`connection error for ${s.deviceId ?? 'unknown'}`, s.message);
@@ -73,7 +84,7 @@ app.whenReady().then(() => {
 
   installCertHandler(store, promptTrust);
 
-  registerIpc(store, connections, bridge);
+  registerIpc(store, connections, bridge, secrets);
   registerWindowIpc(window, {
     onBack: () => connections.background(),
     onDisconnect: () => connections.disconnect(),

@@ -46,3 +46,50 @@ export function probeCode(): string {
 export function fillCode(password: string, submit: boolean): string {
   return `(${fillLogin.toString()})(${JSON.stringify(password)}, ${submit})`;
 }
+
+export const PROBE_ATTEMPTS = 8;
+export const PROBE_INTERVAL_MS = 250; // ~2s total detection window
+export const FAIL_WINDOW_MS = 3000;   // "still on login" => failed sign-in
+
+export interface AutofillState { submittedThisSession: boolean; }
+export type AutofillAction = 'skip' | 'fill-and-submit' | 'fill-only';
+
+export function autofillDecision(state: AutofillState, formPresent: boolean): AutofillAction {
+  if (!formPresent) return 'skip';
+  return state.submittedThisSession ? 'fill-only' : 'fill-and-submit';
+}
+
+export interface AutofillDeps {
+  runJs(code: string): Promise<unknown>;
+  getPassword(): string | null;
+  notifyFailure(): void;
+  delay(ms: number): Promise<void>;
+}
+
+export async function runAutofill(deps: AutofillDeps, state: AutofillState): Promise<void> {
+  const password = deps.getPassword();
+  if (password == null) return; // no saved secret for this device
+
+  let present = false;
+  for (let i = 0; i < PROBE_ATTEMPTS; i++) {
+    present = (await deps.runJs(probeCode())) === true;
+    if (present) break;
+    if (i < PROBE_ATTEMPTS - 1) await deps.delay(PROBE_INTERVAL_MS);
+  }
+
+  const action = autofillDecision(state, present);
+  if (action === 'skip') return;
+
+  if (action === 'fill-only') {
+    await deps.runJs(fillCode(password, false)); // fill, do NOT resubmit
+    deps.notifyFailure();
+    return;
+  }
+
+  // fill-and-submit
+  await deps.runJs(fillCode(password, true));
+  state.submittedThisSession = true;
+  await deps.delay(FAIL_WINDOW_MS);
+  const stillLogin = (await deps.runJs(probeCode())) === true;
+  if (stillLogin) deps.notifyFailure(); // failed sign-in — safety valve blocks any resubmit
+}

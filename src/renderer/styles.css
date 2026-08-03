@@ -107,4 +107,5 @@ dialog.settings-panel .mf{display:flex;justify-content:flex-end;gap:9px;padding:
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.overlay .spinner{animation:none}}
 
-.keymark { font-size: 11px; opacity: 0.6; margin-left: 6px; }
+.keymark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: #fff; opacity: .85; }
+.keymark svg { width: 13px; height: 13px; display: block; }

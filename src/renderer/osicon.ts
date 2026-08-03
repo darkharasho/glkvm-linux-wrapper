@@ -1,4 +1,5 @@
 import type { OsKind } from '@shared/types';
+import keyRoundSvg from 'lucide-static/icons/key-round.svg?raw';
 
 const P: Record<OsKind, string> = {
   macos: '<path d="M16.4 12.9c0-2 1.6-3 1.7-3-.9-1.4-2.4-1.5-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.2 2-1.4 2.4-.4 6 1 8 .7 1 1.4 2 2.4 2 1 0 1.3-.6 2.5-.6 1.1 0 1.5.6 2.5.6s1.7-.9 2.3-1.9c.7-1.1 1-2.1 1-2.2 0 0-2-.8-2.2-3.6zM14.6 6.3c.5-.7.9-1.6.8-2.6-.8 0-1.8.6-2.4 1.2-.5.6-1 1.5-.8 2.4.9.1 1.8-.4 2.4-1z" fill="currentColor"/>',
@@ -9,4 +10,9 @@ const P: Record<OsKind, string> = {
 
 export function osIcon(os: OsKind): string {
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${P[os] ?? P.generic}</svg>`;
+}
+
+// Small key glyph (Lucide "key-round") marking a device with a saved autofill password.
+export function keyIcon(): string {
+  return keyRoundSvg;
 }

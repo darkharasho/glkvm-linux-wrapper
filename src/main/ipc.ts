@@ -12,7 +12,14 @@ export function registerIpc(store: Store, connections: ConnectionManager, bridge
   ipcMain.handle('devices:list', () => store.getDevices());
   ipcMain.handle('devices:add', (_e, input) => store.addDevice(input));
   ipcMain.handle('devices:update', (_e, id, patch) => store.updateDevice(id, patch));
-  ipcMain.handle('devices:remove', (_e, id) => { store.removeDevice(id); secrets.clear(id); });
+  ipcMain.handle('devices:remove', (_e, id) => {
+    // Forget the cert too, so re-adding the same host re-prompts for trust. Capture the
+    // address before removing the device (untrust is keyed by host, not device id).
+    const dev = store.getDevices().find(d => d.id === id);
+    store.removeDevice(id);
+    secrets.clear(id);
+    if (dev) { connections.disconnect(id); store.untrustHost(dev.address); }
+  });
   ipcMain.handle('settings:get', () => store.getSettings());
   ipcMain.handle('settings:set', (_e, next) => store.setSettings(next));
   ipcMain.handle('conn:connect', (_e, id) => connections.connect(id));

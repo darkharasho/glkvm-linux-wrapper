@@ -15,6 +15,7 @@ button{font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink);
 button:hover{background:var(--panel2)}
 button.pri{background:var(--ink);color:var(--bg);border:none;font-weight:600}
 button.pri:hover{filter:brightness(.92)}
+button.danger{color:var(--danger)}
 button.danger:hover{color:#ff6b6b;border-color:#3a2626;background:transparent}
 
 /* dashboard */
@@ -106,4 +107,5 @@ dialog.settings-panel .mf{display:flex;justify-content:flex-end;gap:9px;padding:
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.overlay .spinner{animation:none}}
 
-.keymark { font-size: 11px; opacity: 0.6; margin-left: 6px; }
+.keymark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: #fff; opacity: .85; }
+.keymark svg { width: 13px; height: 13px; display: block; }

@@ -1,6 +1,7 @@
 import { BaseWindow, WebContentsView, session } from 'electron';
 import type { createStore } from './store';
 import { attachKeyboard } from './keyboard';
+import { attachContextMenu } from './contextMenu';
 import type { LayoutController } from '../window';
 import { runAutofill, type AutofillState } from './autofill';
 import type { SecretsStore } from './secrets';
@@ -172,6 +173,10 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
           },
           () => deps.store.getDevices().find((d) => d.id === id)?.os ?? 'generic',
         );
+        // Native editing context menu (Cut/Copy/Paste/Select-All) so users can right-click paste
+        // into the remote UI's fields (e.g. GLKVM's "paste to remote" box) — a WebContentsView has
+        // no default context menu of its own.
+        attachContextMenu(newView.webContents, deps.window);
         // Harden the remote KVM page against opening arbitrary windows or navigating away from
         // its own origin (defense-in-depth against a malicious/compromised device page). The
         // allowed origin is fixed to the device's own URL at creation time — using getURL() here
@@ -188,6 +193,16 @@ export function createConnectionManager(deps: Deps): ConnectionManager {
         });
         newView.webContents.on('did-finish-load', () => {
           if (target !== id) return; // superseded by a later connect()/background() — ignore
+          // Defensive: only attach a view whose committed page is actually the device's own
+          // origin. A blank/error interstitial (e.g. chrome-error:// from a rejected cert) also
+          // fires did-finish-load; attaching it would cover the dashboard with a white screen and
+          // hide the cert-trust prompt. Keep the overlay and surface an error instead.
+          const loadedOrigin = (() => { try { return new URL(newView.webContents.getURL()).origin; } catch { return null; } })();
+          if (!deviceOrigin || loadedOrigin !== deviceOrigin) {
+            clearWatchdog(id);
+            deps.onState({ deviceId: id, state: 'error', message: 'Failed to load device page' });
+            return;
+          }
           clearWatchdog(id);
           deps.window.contentView.addChildView(newView);
           deps.layout.setActiveDeviceView(newView);

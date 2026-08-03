@@ -1,6 +1,6 @@
 import type { Device } from '@shared/types';
 import { openDeviceDialog } from './deviceDialog';
-import { osIcon } from './osicon';
+import { osIcon, keyIcon } from './osicon';
 
 let connectedIds = new Set<string>();
 let mountedRoot: HTMLElement | null = null;
@@ -69,11 +69,12 @@ function rowFor(root: HTMLElement, d: Device, hasSecret: boolean): HTMLElement {
   (el.querySelector('.nm') as HTMLElement).textContent = d.name;
   (el.querySelector('.addr') as HTMLElement).textContent = d.address;
   if (hasSecret) {
+    // Inline next to the name (not on its own line), so the row stays compact.
     const key = document.createElement('span');
     key.className = 'keymark';
     key.title = 'Autofill armed';
-    key.textContent = '🔑';
-    (el.querySelector('.meta') as HTMLElement).appendChild(key);
+    key.innerHTML = keyIcon();
+    (el.querySelector('.nm') as HTMLElement).appendChild(key);
   }
   applyStatus(el, connectedIds.has(d.id));
   el.addEventListener('click', () => window.glkvm.connect(d.id));
@@ -89,6 +90,10 @@ function rowFor(root: HTMLElement, d: Device, hasSecret: boolean): HTMLElement {
         await window.glkvm.updateDevice(d.id, dev);
         if (password) await window.glkvm.setPassword(d.id, password);
         else if (clearPassword) await window.glkvm.clearPassword(d.id);
+        await renderDashboard(root);
+      },
+      onDelete: async () => {
+        await window.glkvm.removeDevice(d.id);
         await renderDashboard(root);
       },
     });

@@ -20,8 +20,18 @@ export async function renderDashboard(root: HTMLElement): Promise<void> {
   if (!devices.length) { list.className = ''; list.innerHTML = `<p class="empty">No devices yet. Add your first one.</p>`; }
   for (const d of devices) list.appendChild(rowFor(root, d));
 
-  (root.querySelector('#add-btn') as HTMLElement).onclick = () =>
-    openDeviceDialog({ onSave: async (i) => { await window.glkvm.addDevice(i); await renderDashboard(root); } });
+  (root.querySelector('#add-btn') as HTMLElement).onclick = async () => {
+    const secretsAvailable = await window.glkvm.secretsAvailable();
+    openDeviceDialog({
+      secretsAvailable,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- new devices never have a saved password to clear
+      onSave: async ({ password, clearPassword, ...dev }) => {
+        const d = await window.glkvm.addDevice(dev);
+        if (password) await window.glkvm.setPassword(d.id, password);
+        await renderDashboard(root);
+      },
+    });
+  };
   (root.querySelector('#settings-btn') as HTMLElement).onclick = () =>
     window.dispatchEvent(new CustomEvent('open-settings'));
 }
@@ -59,7 +69,21 @@ function rowFor(root: HTMLElement, d: Device): HTMLElement {
   (el.querySelector('.addr') as HTMLElement).textContent = d.address;
   applyStatus(el, connectedIds.has(d.id));
   el.addEventListener('click', () => window.glkvm.connect(d.id));
-  el.addEventListener('contextmenu', (e) => { e.preventDefault();
-    openDeviceDialog({ device: d, onSave: async (i) => { await window.glkvm.updateDevice(d.id, i); await renderDashboard(root); } }); });
+  el.addEventListener('contextmenu', async (e) => {
+    e.preventDefault();
+    const [hasSavedPassword, secretsAvailable] = await Promise.all([
+      window.glkvm.hasPassword(d.id),
+      window.glkvm.secretsAvailable(),
+    ]);
+    openDeviceDialog({
+      device: d, hasSavedPassword, secretsAvailable,
+      onSave: async ({ password, clearPassword, ...dev }) => {
+        await window.glkvm.updateDevice(d.id, dev);
+        if (password) await window.glkvm.setPassword(d.id, password);
+        else if (clearPassword) await window.glkvm.clearPassword(d.id);
+        await renderDashboard(root);
+      },
+    });
+  });
   return el;
 }

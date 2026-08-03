@@ -12,6 +12,7 @@ interface DialogOpts {
     password?: string;        // new/replacement plaintext, if the user typed one
     clearPassword?: boolean;  // user cleared an existing saved password
   }) => Promise<void>;
+  onDelete?: () => Promise<void>;  // edit mode only — remove the device (+ its cert & password)
 }
 
 const SWATCHES = ['#34d399', '#e5e7eb', '#f4a13a', '#a78bfa', '#f472b6'];
@@ -37,6 +38,7 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
     title: opts.device ? 'Edit device' : 'Add device',
     subtitle: "Point it at the device's local address.",
     buttons: [
+      ...(opts.device ? [{ label: 'Delete', value: 'delete', danger: true }] : []),
       { label: 'Cancel', value: 'cancel' },
       { label: opts.device ? 'Save' : 'Add device', value: 'save', primary: true },
     ],
@@ -98,6 +100,20 @@ function runDialog(opts: DialogOpts, name0: string, address0: string, os0: OsKin
       renderPw();
     },
   }).then(async (v) => {
+    if (v === 'delete') {
+      const confirm = await openModal({
+        title: `Delete ${name0 || 'this device'}?`,
+        subtitle: 'This removes the device and forgets its trusted certificate and saved password. It cannot be undone.',
+        buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Delete', value: 'delete', danger: true }],
+      });
+      if (confirm === 'delete') {
+        try { await opts.onDelete?.(); }
+        catch { runDialog(opts, name, address, os, color); }
+      } else {
+        runDialog(opts, name, address, os, color);
+      }
+      return;
+    }
     if (v !== 'save') return;
     if (!name.trim() || !address.trim()) {
       runDialog(opts, name, address, os, color);

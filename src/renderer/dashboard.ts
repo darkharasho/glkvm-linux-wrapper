@@ -91,6 +91,10 @@ function rowFor(root: HTMLElement, d: Device, hasSecret: boolean): HTMLElement {
         else if (clearPassword) await window.glkvm.clearPassword(d.id);
         await renderDashboard(root);
       },
+      onDelete: async () => {
+        await window.glkvm.removeDevice(d.id);
+        await renderDashboard(root);
+      },
     });
   });
   return el;

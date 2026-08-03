@@ -37,6 +37,14 @@ describe('store', () => {
     expect(createStore(dir).getTrustStore()['mypc.local']).toBe('AA:BB');
   });
 
+  it('untrusts a host, persisting the removal', () => {
+    const s = createStore(dir);
+    s.trustCert('mypc.local', 'AA:BB');
+    s.untrustHost('mypc.local');
+    expect(s.getTrustStore()['mypc.local']).toBeUndefined();
+    expect(createStore(dir).getTrustStore()['mypc.local']).toBeUndefined();
+  });
+
   it('writes atomically (no leftover temp file)', () => {
     const s = createStore(dir);
     s.addDevice({ name: 'Work', address: 'mypc.local' });

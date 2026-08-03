@@ -62,6 +62,13 @@ export function createStore(baseDir: string) {
     setSettings(next: Settings) { settings = validateSettings(next); saveSettings(); },
     getTrustStore: () => trust,
     trustCert(host: string, fingerprint: string) { trust = { ...trust, [host]: fingerprint }; saveTrust(); },
+    untrustHost(host: string) {
+      if (!(host in trust)) return;
+      const next = { ...trust };
+      delete next[host];
+      trust = next;
+      saveTrust();
+    },
     applyImport(bundle: BackupBundle, mode: 'merge' | 'replace') {
       const out = applyBackup({ devices, settings }, bundle, mode);
       devices = out.devices; settings = out.settings;

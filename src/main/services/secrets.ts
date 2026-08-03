@@ -15,6 +15,7 @@ export interface SecretsStore {
   get(deviceId: string): string | null;
   has(deviceId: string): boolean;
   clear(deviceId: string): void;
+  ids(): string[];
 }
 
 // secrets.json maps deviceId -> base64(ciphertext). Only ciphertext is ever written.
@@ -66,5 +67,6 @@ export function createSecretsStore(baseDir: string, safe: SafeStorageLike): Secr
       data = next;
       save();
     },
+    ids: () => Object.keys(data),
   };
 }

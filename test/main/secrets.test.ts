@@ -63,4 +63,10 @@ describe('secrets store', () => {
     s.set('dev1', 'hunter2');
     expect(existsSync(join(dir, 'secrets.json.tmp'))).toBe(false);
   });
+
+  it('lists ids that have a stored secret', () => {
+    const s = createSecretsStore(dir, fakeSafe());
+    s.set('a', 'x'); s.set('b', 'y'); s.clear('a');
+    expect(createSecretsStore(dir, fakeSafe()).ids().sort()).toEqual(['b']);
+  });
 });

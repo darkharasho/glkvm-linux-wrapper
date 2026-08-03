@@ -10,6 +10,7 @@ const api: GlkvmApi = {
   hasPassword: (id) => ipcRenderer.invoke('secrets:has', id),
   clearPassword: (id) => ipcRenderer.invoke('secrets:clear', id),
   secretsAvailable: () => ipcRenderer.invoke('secrets:available'),
+  listPasswordIds: () => ipcRenderer.invoke('secrets:list'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (next) => ipcRenderer.invoke('settings:set', next),
   connect: (id) => ipcRenderer.invoke('conn:connect', id),

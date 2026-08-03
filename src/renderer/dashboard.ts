@@ -8,6 +8,7 @@ let mountedRoot: HTMLElement | null = null;
 export async function renderDashboard(root: HTMLElement): Promise<void> {
   mountedRoot = root;
   const devices = await window.glkvm.listDevices();
+  const secretIds = new Set(await window.glkvm.listPasswordIds());
   root.innerHTML = `
     <header class="topbar">
       <div><h1>Devices</h1><div class="sub"></div></div>
@@ -18,7 +19,7 @@ export async function renderDashboard(root: HTMLElement): Promise<void> {
     devices.length ? `${devices.length} saved · select one to connect` : '';
   const list = root.querySelector('#list') as HTMLElement;
   if (!devices.length) { list.className = ''; list.innerHTML = `<p class="empty">No devices yet. Add your first one.</p>`; }
-  for (const d of devices) list.appendChild(rowFor(root, d));
+  for (const d of devices) list.appendChild(rowFor(root, d, secretIds.has(d.id)));
 
   (root.querySelector('#add-btn') as HTMLElement).onclick = async () => {
     const secretsAvailable = await window.glkvm.secretsAvailable();
@@ -57,7 +58,7 @@ function applyStatus(row: HTMLElement, connected: boolean): void {
   if (lbl) lbl.textContent = connected ? 'Connected' : 'Idle';
 }
 
-function rowFor(root: HTMLElement, d: Device): HTMLElement {
+function rowFor(root: HTMLElement, d: Device, hasSecret: boolean): HTMLElement {
   const el = document.createElement('button');
   el.className = 'row'; el.dataset.id = d.id;
   el.innerHTML = `
@@ -67,6 +68,13 @@ function rowFor(root: HTMLElement, d: Device): HTMLElement {
     <span class="chev">›</span>`;
   (el.querySelector('.nm') as HTMLElement).textContent = d.name;
   (el.querySelector('.addr') as HTMLElement).textContent = d.address;
+  if (hasSecret) {
+    const key = document.createElement('span');
+    key.className = 'keymark';
+    key.title = 'Autofill armed';
+    key.textContent = '🔑';
+    (el.querySelector('.meta') as HTMLElement).appendChild(key);
+  }
   applyStatus(el, connectedIds.has(d.id));
   el.addEventListener('click', () => window.glkvm.connect(d.id));
   el.addEventListener('contextmenu', async (e) => {

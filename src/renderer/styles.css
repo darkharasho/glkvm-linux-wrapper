@@ -105,3 +105,5 @@ dialog.settings-panel .mf{display:flex;justify-content:flex-end;gap:9px;padding:
 .overlay menu{display:flex;gap:9px;justify-content:center;margin:16px 0 0;padding:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.overlay .spinner{animation:none}}
+
+.keymark { font-size: 11px; opacity: 0.6; margin-left: 6px; }

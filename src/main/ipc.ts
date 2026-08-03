@@ -22,6 +22,7 @@ export function registerIpc(store: Store, connections: ConnectionManager, bridge
   ipcMain.handle('secrets:has', (_e, id) => secrets.has(id));
   ipcMain.handle('secrets:clear', (_e, id) => secrets.clear(id));
   ipcMain.handle('secrets:available', () => secrets.isAvailable());
+  ipcMain.handle('secrets:list', () => secrets.ids());
 
   ipcMain.handle('backup:export', async () => {
     const { canceled, filePath } = await dialog.showSaveDialog({

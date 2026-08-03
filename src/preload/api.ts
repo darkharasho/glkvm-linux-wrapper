@@ -9,6 +9,7 @@ export interface GlkvmApi {
   hasPassword(id: string): Promise<boolean>;
   clearPassword(id: string): Promise<void>;
   secretsAvailable(): Promise<boolean>;
+  listPasswordIds(): Promise<string[]>;
   getSettings(): Promise<Settings>;
   setSettings(next: Settings): Promise<void>;
   connect(id: string): Promise<void>;

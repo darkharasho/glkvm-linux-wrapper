@@ -19,6 +19,7 @@ export const fakeSafe: SafeStorageLike = {
 export function fakeGithub() {
   const gh = {
     repoExists: false,
+    repoPublic: false,
     file: null as { text: string; sha: string } | null,
     conflicts: 0,
     unauthorized: false,
@@ -37,7 +38,7 @@ export function fakeGithub() {
     const reply = (status: number, data: unknown = {}) =>
       ({ status, json: async () => data, text: async () => JSON.stringify(data) });
     if (gh.unauthorized) return reply(401, { message: 'Bad credentials' });
-    if (method === 'GET' && path === base) return gh.repoExists ? reply(200, { private: true }) : reply(404);
+    if (method === 'GET' && path === base) return gh.repoExists ? reply(200, { private: !gh.repoPublic }) : reply(404);
     if (method === 'POST' && path === '/user/repos') {
       if (gh.repoExists) return reply(422, { message: 'name already exists' });
       gh.repoExists = true;

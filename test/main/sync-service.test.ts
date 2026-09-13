@@ -70,6 +70,24 @@ describe('sync service cycle', () => {
     expect(a.overviews.at(-1)?.sync.error).toBe('Signed out of GitHub — sign in again');
   });
 
+  it('refuses to sync into a public repository', async () => {
+    const { gh, fetch } = fakeGithub();
+    gh.repoExists = true;
+    gh.repoPublic = true;
+    const a = machine(fetch);
+    a.store.addDevice({ name: 'Lab', address: 'kvm-a.local' });
+    await a.service.syncNow();
+    expect(gh.puts).toBe(0);
+    expect(a.overviews.at(-1)?.sync).toMatchObject({
+      state: 'error', error: 'Your glkvm-config repository is public. Make it private on GitHub to sync.',
+    });
+
+    gh.repoPublic = false;
+    await a.service.syncNow();
+    expect(gh.puts).toBe(1);
+    expect(a.overviews.at(-1)?.sync.state).toBe('synced');
+  });
+
   it('never overwrites an unreadable sync file', async () => {
     const { gh, fetch } = fakeGithub();
     gh.repoExists = true;

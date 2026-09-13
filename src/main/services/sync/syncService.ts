@@ -119,6 +119,8 @@ export function createSyncService(deps: SyncDeps): SyncService {
       await sleep(1500);
     } else if (res.status !== 200) {
       throw githubError('opening the sync repository', res);
+    } else if (asRecord(res.data)?.private !== true) {
+      throw new SyncError('Your glkvm-config repository is public. Make it private on GitHub to sync.', 'invalid');
     }
     repoReady = true;
   }

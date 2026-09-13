@@ -14,6 +14,7 @@ import { createSealedFile } from './services/sealedFile';
 import { createGithubAuth, GITHUB_CLIENT_ID } from './services/github/auth';
 import { createSyncStateFile } from './services/sync/stateFile';
 import { createSyncService } from './services/sync/syncService';
+import type { ChangeEvent } from '@shared/sync/format';
 
 app.whenReady().then(() => {
   const { window, dashboard, titlebar, layout } = createMainWindow();
@@ -93,6 +94,9 @@ app.whenReady().then(() => {
   registerIpc(store, connections, bridge, secrets);
 
   const userData = app.getPath('userData');
+  const sendToDashboard = (channel: string, ...args: unknown[]) => {
+    if (!dashboard.webContents.isDestroyed()) dashboard.webContents.send(channel, ...args);
+  };
   const auth = createGithubAuth({
     fetch,
     sealed: createSealedFile(join(userData, 'github-auth.json'), safeStorage),
@@ -107,19 +111,23 @@ app.whenReady().then(() => {
     keyFile: createSealedFile(join(userData, 'sync-key.json'), safeStorage),
     stateFile: createSyncStateFile(userData),
     logger,
-    onOverview: (o) => dashboard.webContents.send('sync:overview', o),
-    onApplied: () => dashboard.webContents.send('sync:applied'),
+    onOverview: (o) => sendToDashboard('sync:overview', o),
+    onApplied: () => sendToDashboard('sync:applied'),
   });
-  store.onChange((e) => sync.noteChange(e));
-  secrets.onChange((e) => sync.noteChange(e));
+  // Sync bookkeeping must never abort a store mutation (or the IPC handler's follow-up work).
+  const noteChange = (e: ChangeEvent) => {
+    try { sync.noteChange(e); } catch (err) { logger.error('sync: noteChange failed', (err as Error).message); }
+  };
+  store.onChange(noteChange);
+  secrets.onChange(noteChange);
   auth.onChange((user) => {
     logger.info(user ? 'github: signed in' : 'github: signed out');
     if (user) sync.scheduleSync(); else sync.forgetKey();
-    dashboard.webContents.send('sync:overview', sync.overview());
+    sendToDashboard('sync:overview', sync.overview());
   });
   auth.onError((message) => {
     logger.error('github: sign-in failed', message);
-    dashboard.webContents.send('github:auth-error', message);
+    sendToDashboard('github:auth-error', message);
   });
   window.on('focus', () => sync.onFocus());
   if (dashboard.webContents.isLoading()) dashboard.webContents.once('did-finish-load', () => sync.scheduleSync());

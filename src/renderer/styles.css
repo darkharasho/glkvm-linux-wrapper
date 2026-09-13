@@ -85,6 +85,32 @@ dialog.settings-panel .mb h4{margin:4px 0 0;font-size:12px;color:var(--mut);font
 dialog.settings-panel .mf{display:flex;justify-content:flex-end;gap:9px;padding:18px 20px;
   border-top:1px solid var(--line)}
 .settings .io{display:flex;gap:8px;margin-bottom:8px}
+.settings .sync{display:flex;flex-direction:column;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.settings .sync:empty{display:none}
+.sync .s{font-size:12.5px;color:var(--mut);line-height:1.5;margin:0}
+.sync .s.small{font-size:11.5px}
+.sync-row{display:flex;gap:8px;flex-wrap:wrap}
+.sync-form .sync-row{justify-content:flex-end}
+.sync-code{font-family:'JetBrains Mono',monospace;font-size:24px;letter-spacing:.16em;text-align:center;
+  padding:12px;border:1px dashed var(--line2);border-radius:10px}
+.sync-who{display:flex;align-items:center;gap:12px}
+.sync-who b{display:block;font-size:13.5px;font-weight:600}
+.sync-who span{font-size:12px;color:var(--mut)}
+.sync-av{width:34px;height:34px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);
+  display:grid;place-items:center;font-weight:600;font-size:13px}
+.sync-pill{margin-left:auto;font-size:11.5px;padding:4px 9px;border-radius:99px;border:1px solid var(--line2);
+  color:var(--mut);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync-pill i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.sync-pill.synced i{background:var(--ok)}
+.sync-pill.error{color:var(--danger)}
+.sync-pill.error i{background:var(--danger)}
+.sync-note{font-size:12.5px;line-height:1.45;border:1px solid #3a3020;background:#17140e;border-radius:10px;padding:10px 12px}
+.sync-note b{display:block;margin-bottom:2px}
+.sync-note.err{border-color:#3a2626;background:#170f0f}
+.sync-form{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line2);border-radius:10px;padding:14px;background:var(--bg)}
+.sync-form h5{margin:0;font-size:14px;font-weight:600}
+.sync-error{color:var(--danger);font-size:12px}
+.sync-error:empty{display:none}
 .hk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .hotkey-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;
   border:1px solid var(--line2);border-radius:8px;background:var(--bg)}

@@ -18,6 +18,8 @@ renderDashboard(root);
 window.addEventListener('open-settings', () => openSettings(root, () => renderDashboard(root)));
 window.glkvm.onNavigate((view) => { if (view === 'dashboard') renderDashboard(root); });
 window.glkvm.onConnectedDevices((ids) => setConnectedDevices(ids));
+// While Settings is open, closing it re-renders the dashboard anyway.
+window.glkvm.onSyncApplied(() => { if (!document.querySelector('dialog.settings-panel')) void renderDashboard(root); });
 
 let lastDeviceId: string | null = null;
 window.glkvm.onConnectionState((s) => {

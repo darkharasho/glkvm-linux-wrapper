@@ -1,5 +1,6 @@
 import type { Settings, HotkeyBinding } from '@shared/types';
 import { toAccelerator, type KeyInput } from '@shared/keybindings';
+import { mountSyncSection } from './syncSection';
 
 export async function openSettings(root: HTMLElement, onClose: () => void): Promise<void> {
   const settings = await window.glkvm.getSettings();
@@ -8,6 +9,7 @@ export async function openSettings(root: HTMLElement, onClose: () => void): Prom
   dlg.innerHTML = `
     <div class="mh"><h3>Settings</h3></div>
     <div class="mb">
+      <section id="sync" class="sync"></section>
       <section class="io"><button id="export">Export backup…</button><button id="import">Import backup…</button></section>
       <h4>Hotkeys</h4>
       <ul id="hotkeys" class="hk-list"></ul>
@@ -15,6 +17,7 @@ export async function openSettings(root: HTMLElement, onClose: () => void): Prom
     <div class="mf"><button id="close" class="pri">Done</button></div>`;
   document.body.appendChild(dlg);
   dlg.showModal();
+  const disposeSync = mountSyncSection(dlg.querySelector('#sync') as HTMLElement);
 
   const list = dlg.querySelector('#hotkeys') as HTMLElement;
   const draft: Settings = structuredClone(settings);
@@ -26,7 +29,7 @@ export async function openSettings(root: HTMLElement, onClose: () => void): Prom
     await window.glkvm.setSettings(draft);
     dlg.close();
   };
-  dlg.addEventListener('close', () => { dlg.remove(); onClose(); });
+  dlg.addEventListener('close', () => { disposeSync(); dlg.remove(); onClose(); });
 }
 
 const ACTION_OPTIONS: ReadonlyArray<{ value: HotkeyBinding['action']; label: string }> = [

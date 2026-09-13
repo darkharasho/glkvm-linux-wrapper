@@ -1,4 +1,5 @@
 import type { Device, HotkeyBinding, OsKind, Settings } from './types';
+import { normalizeAddress, toDeviceUrl } from './url';
 
 export const SCHEMA_VERSION = 1;
 
@@ -41,9 +42,15 @@ function isDevice(v: unknown): v is Device {
 
 export function validateDevices(raw: unknown): Device[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .filter(isDevice)
-    .map((d) => ({ ...(d as Device), os: coerceOs((d as { os?: unknown }).os) }));
+  const out: Device[] = [];
+  for (const d of raw.filter(isDevice)) {
+    // The url is always derived from the address: autofill types saved passwords into whatever page the
+    // url loads, so a synced or imported file must not be able to point it somewhere else.
+    let address: string;
+    try { address = normalizeAddress(d.address); } catch { continue; }
+    out.push({ ...d, address, url: toDeviceUrl(address), os: coerceOs((d as { os?: unknown }).os) });
+  }
+  return out;
 }
 
 function isHotkey(v: unknown): v is HotkeyBinding {

@@ -29,6 +29,22 @@ describe('validateDevices', () => {
     expect(out).toHaveLength(1);
     expect(out[0].id).toBe('b');
   });
+  it('derives url from the normalized address, ignoring a mismatched url', () => {
+    const out = validateDevices([
+      { id: 'a', name: 'A', address: 'KVM-A.local/', url: 'https://evil.example', createdAt: 1 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].address).toBe('kvm-a.local');
+    expect(out[0].url).toBe('https://kvm-a.local');
+  });
+  it('drops a device whose address fails normalization', () => {
+    const out = validateDevices([
+      { id: 'a', name: 'A', address: '   ', url: 'https://kvm-a.local', createdAt: 1 },
+      { id: 'b', name: 'B', address: 'kvm b.local', url: 'https://kvm-b.local', createdAt: 1 },
+      { id: 'c', name: 'C', address: 'kvm-c.local', url: 'https://kvm-c.local', createdAt: 1 },
+    ]);
+    expect(out.map(d => d.id)).toEqual(['c']);
+  });
 });
 
 describe('validateSettings', () => {

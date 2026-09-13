@@ -59,6 +59,7 @@ export function createStore(baseDir: string) {
       if (i === -1) return null;
       const address = patch.address ? normalizeAddress(patch.address) : devices[i].address;
       const updated: Device = { ...devices[i], ...patch, address, url: toDeviceUrl(address), os: coerceOs(patch.os ?? devices[i].os) };
+      if (JSON.stringify(updated) === JSON.stringify(devices[i])) return devices[i];
       devices = devices.map(d => d.id === id ? updated : d);
       saveDevices();
       emit({ kind: 'device', id });
@@ -71,9 +72,16 @@ export function createStore(baseDir: string) {
       if (existed) emit({ kind: 'device-removed', id });
     },
     getSettings: () => settings,
-    setSettings(next: Settings) { settings = validateSettings(next); saveSettings(); emit({ kind: 'settings' }); },
+    setSettings(next: Settings) {
+      const validated = validateSettings(next);
+      if (JSON.stringify(validated) === JSON.stringify(settings)) return;
+      settings = validated;
+      saveSettings();
+      emit({ kind: 'settings' });
+    },
     getTrustStore: () => trust,
     trustCert(host: string, fingerprint: string) {
+      if (trust[host] === fingerprint) return;
       trust = { ...trust, [host]: fingerprint };
       saveTrust();
       emit({ kind: 'cert', host });

@@ -20,13 +20,16 @@ export async function openSettings(root: HTMLElement, onClose: () => void): Prom
   const disposeSync = mountSyncSection(dlg.querySelector('#sync') as HTMLElement);
 
   const list = dlg.querySelector('#hotkeys') as HTMLElement;
+  const snapshot = JSON.stringify(settings);
   const draft: Settings = structuredClone(settings);
   for (const hk of draft.hotkeys) list.appendChild(renderRow(hk, draft));
 
   (dlg.querySelector('#export') as HTMLElement).onclick = () => window.glkvm.exportBackup();
   (dlg.querySelector('#import') as HTMLElement).onclick = async () => { await window.glkvm.importBackup(); dlg.close(); };
   (dlg.querySelector('#close') as HTMLElement).onclick = async () => {
-    await window.glkvm.setSettings(draft);
+    // Only write if the user edited something: a sync pull may have landed while the dialog was open,
+    // and re-sending the untouched draft would overwrite it with stale values and a fresh timestamp.
+    if (JSON.stringify(draft) !== snapshot) await window.glkvm.setSettings(draft);
     dlg.close();
   };
   dlg.addEventListener('close', () => { disposeSync(); dlg.remove(); onClose(); });

@@ -23,7 +23,7 @@ describe('store change events', () => {
     s.onChange(e => events.push(e));
     const d = s.addDevice({ name: 'Lab', address: 'kvm-a.local' });
     s.updateDevice(d.id, { name: 'Lab 2' });
-    s.setSettings(DEFAULT_SETTINGS);
+    s.setSettings({ ...DEFAULT_SETTINGS, general: { ...DEFAULT_SETTINGS.general, captureIndicator: false } });
     s.trustCert('kvm-a.local', 'AB');
     s.untrustHost('kvm-a.local');
     s.untrustHost('never-trusted.local');
@@ -46,6 +46,19 @@ describe('store change events', () => {
     expect(events).toEqual([
       { kind: 'device', id: 'b-id' }, { kind: 'device-removed', id: a.id }, { kind: 'settings' },
     ]);
+  });
+
+  it('emits nothing for mutations that change nothing', () => {
+    const s = createStore(dir);
+    const d = s.addDevice({ name: 'Lab', address: 'kvm-a.local', color: '#123456', os: 'linux' });
+    s.trustCert('kvm-a.local', 'AB');
+    const events: ChangeEvent[] = [];
+    s.onChange(e => events.push(e));
+    s.setSettings(structuredClone(DEFAULT_SETTINGS));
+    expect(s.updateDevice(d.id, { name: 'Lab', address: 'kvm-a.local', color: '#123456', os: 'linux' })).toEqual(d);
+    expect(s.updateDevice(d.id, {})).toEqual(d);
+    s.trustCert('kvm-a.local', 'AB');
+    expect(events).toEqual([]);
   });
 
   it('applySynced persists without emitting', () => {

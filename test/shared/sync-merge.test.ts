@@ -73,6 +73,26 @@ describe('mergeSync', () => {
     expect(m.local.secrets).toEqual({ new: 'pw-old' });
   });
 
+  it('keeps duplicate addresses when passwords cannot be merged', () => {
+    const lockedRemote = mergeSync(
+      local({ devices: [dev('old', 'kvm-a.local')], secrets: { old: 'pw-old' } }),
+      state({ devices: { old: T + 10 }, secrets: { old: T + 10 } }),
+      remote({ devices: { new: { updatedAt: T + 20, data: dev('new', 'kvm-a.local') } }, secrets: null }),
+      NOW,
+    );
+    expect(lockedRemote.local.devices.map(d => d.id)).toEqual(['old', 'new']);
+    expect(lockedRemote.remote.devices.old).toEqual({ updatedAt: T + 10, data: dev('old', 'kvm-a.local') });
+    expect(lockedRemote.local.secrets).toEqual({ old: 'pw-old' });
+
+    const lockedLocal = mergeSync(
+      local({ devices: [dev('old', 'kvm-a.local')], secrets: null }),
+      state({ devices: { old: T + 10 } }),
+      remote({ devices: { new: { updatedAt: T + 20, data: dev('new', 'kvm-a.local') } }, secrets: {} }),
+      NOW,
+    );
+    expect(lockedLocal.local.devices.map(d => d.id)).toEqual(['old', 'new']);
+  });
+
   it('tombstones the password of a deleted device', () => {
     const m = mergeSync(
       local({ secrets: { a: 'pw' } }),

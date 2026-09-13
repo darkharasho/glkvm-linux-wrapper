@@ -82,18 +82,22 @@ export function mergeSync(local: LocalSnapshot, state: SyncState, remote: Remote
     ? mergeCollection(local.secrets, state.secrets, state.deleted.secrets, remote.secrets)
     : null;
 
-  const byAddress = new Map<string, string>();
-  for (const id of Object.keys(devices.items).sort()) {
-    const address = devices.items[id].address;
-    const otherId = byAddress.get(address);
-    if (otherId === undefined) { byAddress.set(address, id); continue; }
-    const [keep, drop] = devices.stamps[id] > devices.stamps[otherId] ? [id, otherId] : [otherId, id];
-    const at = devices.stamps[keep];
-    byAddress.set(address, keep);
-    if (secrets && has(secrets.items, drop) && !has(secrets.items, keep)) {
-      setEntry(secrets, keep, { updatedAt: at, data: secrets.items[drop] });
+  // Collapse duplicate addresses only when passwords are being merged too, so the dropped device's
+  // password can move to the kept one. Without a key, duplicates wait for a machine that has one.
+  if (secrets) {
+    const byAddress = new Map<string, string>();
+    for (const id of Object.keys(devices.items).sort()) {
+      const address = devices.items[id].address;
+      const otherId = byAddress.get(address);
+      if (otherId === undefined) { byAddress.set(address, id); continue; }
+      const [keep, drop] = devices.stamps[id] > devices.stamps[otherId] ? [id, otherId] : [otherId, id];
+      const at = devices.stamps[keep];
+      byAddress.set(address, keep);
+      if (has(secrets.items, drop) && !has(secrets.items, keep)) {
+        setEntry(secrets, keep, { updatedAt: at, data: secrets.items[drop] });
+      }
+      setEntry(devices, drop, tombstone(at));
     }
-    setEntry(devices, drop, tombstone(at));
   }
 
   if (secrets) {

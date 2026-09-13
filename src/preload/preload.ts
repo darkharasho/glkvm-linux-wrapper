@@ -1,5 +1,11 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type { GlkvmApi } from './api';
+
+function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
+  const listener = (_e: IpcRendererEvent, payload: T) => cb(payload);
+  ipcRenderer.on(channel, listener);
+  return () => { ipcRenderer.removeListener(channel, listener); };
+}
 
 const api: GlkvmApi = {
   listDevices: () => ipcRenderer.invoke('devices:list'),
@@ -22,5 +28,18 @@ const api: GlkvmApi = {
   onNavigate: (cb) => { ipcRenderer.on('nav:view', (_e, v) => cb(v)); },
   onModalShow: (cb) => { ipcRenderer.on('modal:show', (_e, spec) => cb(spec)); },
   modalDone: (id, value) => { ipcRenderer.send('modal:done', { id, value }); },
+  syncOverview: () => ipcRenderer.invoke('sync:overview'),
+  githubStartAuth: () => ipcRenderer.invoke('github:start-auth'),
+  githubOpenVerification: () => ipcRenderer.invoke('github:open-verification'),
+  githubCancelAuth: () => ipcRenderer.invoke('github:cancel-auth'),
+  githubSignOut: () => ipcRenderer.invoke('github:sign-out'),
+  syncNow: () => ipcRenderer.invoke('sync:now'),
+  syncSetPassphrase: (p) => ipcRenderer.invoke('sync:set-passphrase', p),
+  syncEnterPassphrase: (p) => ipcRenderer.invoke('sync:enter-passphrase', p),
+  syncChangePassphrase: (current, next) => ipcRenderer.invoke('sync:change-passphrase', current, next),
+  syncResetPassphrase: (next) => ipcRenderer.invoke('sync:reset-passphrase', next),
+  onSyncOverview: (cb) => subscribe('sync:overview', cb),
+  onGithubAuthError: (cb) => subscribe('github:auth-error', cb),
+  onSyncApplied: (cb) => subscribe<void>('sync:applied', () => cb()),
 };
 contextBridge.exposeInMainWorld('glkvm', api);

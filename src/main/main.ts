@@ -1,4 +1,5 @@
-import { app, session, safeStorage } from 'electron';
+import { app, session, safeStorage, shell } from 'electron';
+import { join } from 'node:path';
 import { createMainWindow } from './window';
 import { createStore } from './services/store';
 import { createConnectionManager } from './services/connections';
@@ -8,6 +9,11 @@ import { initUpdater } from './services/updater';
 import { registerIpc, registerWindowIpc } from './ipc';
 import { createModalBridge } from './modal-bridge';
 import { createSecretsStore } from './services/secrets';
+import { registerSyncIpc } from './syncIpc';
+import { createSealedFile } from './services/sealedFile';
+import { createGithubAuth, GITHUB_CLIENT_ID } from './services/github/auth';
+import { createSyncStateFile } from './services/sync/stateFile';
+import { createSyncService } from './services/sync/syncService';
 
 app.whenReady().then(() => {
   const { window, dashboard, titlebar, layout } = createMainWindow();
@@ -85,6 +91,41 @@ app.whenReady().then(() => {
   installCertHandler(store, promptTrust, logger);
 
   registerIpc(store, connections, bridge, secrets);
+
+  const userData = app.getPath('userData');
+  const auth = createGithubAuth({
+    fetch,
+    sealed: createSealedFile(join(userData, 'github-auth.json'), safeStorage),
+    clientId: GITHUB_CLIENT_ID,
+    openExternal: (url) => { void shell.openExternal(url); },
+  });
+  const sync = createSyncService({
+    fetch,
+    auth,
+    store,
+    secrets,
+    keyFile: createSealedFile(join(userData, 'sync-key.json'), safeStorage),
+    stateFile: createSyncStateFile(userData),
+    logger,
+    onOverview: (o) => dashboard.webContents.send('sync:overview', o),
+    onApplied: () => dashboard.webContents.send('sync:applied'),
+  });
+  store.onChange((e) => sync.noteChange(e));
+  secrets.onChange((e) => sync.noteChange(e));
+  auth.onChange((user) => {
+    logger.info(user ? 'github: signed in' : 'github: signed out');
+    if (user) sync.scheduleSync(); else sync.forgetKey();
+    dashboard.webContents.send('sync:overview', sync.overview());
+  });
+  auth.onError((message) => {
+    logger.error('github: sign-in failed', message);
+    dashboard.webContents.send('github:auth-error', message);
+  });
+  window.on('focus', () => sync.onFocus());
+  if (dashboard.webContents.isLoading()) dashboard.webContents.once('did-finish-load', () => sync.scheduleSync());
+  else sync.scheduleSync();
+  registerSyncIpc(auth, sync);
+
   registerWindowIpc(window, {
     onBack: () => connections.background(),
     onDisconnect: () => connections.disconnect(),

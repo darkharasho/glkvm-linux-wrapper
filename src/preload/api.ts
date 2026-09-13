@@ -1,4 +1,5 @@
 import type { Device, OsKind, Settings } from '@shared/types';
+import type { SyncOverview, SyncResult } from '@shared/sync/format';
 
 export interface GlkvmApi {
   listDevices(): Promise<Device[]>;
@@ -21,5 +22,19 @@ export interface GlkvmApi {
   onNavigate(cb: (view: 'dashboard' | 'device' | 'settings') => void): void;
   onModalShow(cb: (spec: { id: number; kind: string; [k: string]: unknown }) => void): void;
   modalDone(id: number, value: string): void;
+  syncOverview(): Promise<SyncOverview>;
+  githubStartAuth(): Promise<{ ok: true; userCode: string; verificationUri: string; expiresIn: number } | { ok: false; error: string }>;
+  githubOpenVerification(): Promise<void>;
+  githubCancelAuth(): Promise<void>;
+  githubSignOut(): Promise<void>;
+  syncNow(): Promise<void>;
+  syncSetPassphrase(passphrase: string): Promise<SyncResult>;
+  syncEnterPassphrase(passphrase: string): Promise<SyncResult>;
+  syncChangePassphrase(current: string, next: string): Promise<SyncResult>;
+  syncResetPassphrase(next: string): Promise<SyncResult>;
+  /** Each on* subscription returns an unsubscribe function. */
+  onSyncOverview(cb: (overview: SyncOverview) => void): () => void;
+  onGithubAuthError(cb: (message: string) => void): () => void;
+  onSyncApplied(cb: () => void): () => void;
 }
 declare global { interface Window { glkvm: GlkvmApi; } }

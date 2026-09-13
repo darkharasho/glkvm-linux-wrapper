@@ -64,34 +64,22 @@ function mergeCollection<T>(
   return out;
 }
 
-/**
- * Drops tombstones that arrived pre-expired directly from the remote doc, before they're
- * considered as merge candidates. This only prunes markers that were already persisted as
- * tombstones in the shared remote file (stale gossip); it must not touch tombstones derived
- * locally (state.deleted) or freshly created during this merge (collapse/password cascade),
- * since those represent the current merge's own conclusions, not aged-out remote history.
- */
-function filterExpiredRemote<T>(remote: Record<string, Entry<T>>, cutoff: number): Record<string, Entry<T>> {
-  const out: Record<string, Entry<T>> = {};
-  for (const [k, e] of Object.entries(remote)) {
-    if (!isLive(e) && e.updatedAt < cutoff) continue;
-    out[k] = e;
+function expire<T>(c: Collection<T>, cutoff: number): void {
+  for (const [k, e] of Object.entries(c.entries)) {
+    if (!isLive(e) && e.updatedAt < cutoff) { delete c.entries[k]; delete c.deleted[k]; }
   }
-  return out;
 }
 
 export function mergeSync(local: LocalSnapshot, state: SyncState, remote: RemoteView, now: number): MergeResult {
-  const cutoff = now - MARKER_TTL_MS;
   const mySettings: Stamped<Settings> = { updatedAt: state.settings, data: local.settings };
   const settings = remote.settings && remote.settings.updatedAt >= mySettings.updatedAt ? remote.settings : mySettings;
 
   const devices = mergeCollection(
-    Object.fromEntries(local.devices.map(d => [d.id, d])), state.devices, state.deleted.devices,
-    filterExpiredRemote(remote.devices, cutoff),
+    Object.fromEntries(local.devices.map(d => [d.id, d])), state.devices, state.deleted.devices, remote.devices,
   );
-  const certs = mergeCollection(local.certs, state.certs, state.deleted.certs, filterExpiredRemote(remote.certs, cutoff));
+  const certs = mergeCollection(local.certs, state.certs, state.deleted.certs, remote.certs);
   const secrets = local.secrets && remote.secrets
-    ? mergeCollection(local.secrets, state.secrets, state.deleted.secrets, filterExpiredRemote(remote.secrets, cutoff))
+    ? mergeCollection(local.secrets, state.secrets, state.deleted.secrets, remote.secrets)
     : null;
 
   const byAddress = new Map<string, string>();
@@ -115,6 +103,11 @@ export function mergeSync(local: LocalSnapshot, state: SyncState, remote: Remote
       }
     }
   }
+
+  const cutoff = now - MARKER_TTL_MS;
+  expire(devices, cutoff);
+  expire(certs, cutoff);
+  if (secrets) expire(secrets, cutoff);
 
   const localIds = new Set(local.devices.map(d => d.id));
   const nextDevices = [

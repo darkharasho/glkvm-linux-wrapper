@@ -9,7 +9,9 @@ import { mergeSync, type LocalSnapshot } from '@shared/sync/merge';
 import { asRecord, githubApi, type FetchLike, type GithubResponse } from '../github/api';
 import type { SealedFile } from '../sealedFile';
 import type { SyncStateFile } from './stateFile';
-import { decrypt, encrypt, parseKey, type SyncKey } from './crypto';
+import {
+  MIN_PASSPHRASE_LENGTH, createHeader, decrypt, encrypt, parseKey, serializeKey, unlock, type SyncKey,
+} from './crypto';
 
 export const PUSH_DEBOUNCE_MS = 2000;
 export const FOCUS_THROTTLE_MS = 60_000;
@@ -286,7 +288,94 @@ export function createSyncService(deps: SyncDeps): SyncService {
     if (deps.auth.getToken()) scheduleSync();
   }
 
-  const notImplemented = async (): Promise<SyncResult> => ({ ok: false, error: 'Not implemented' });
+  const failure = (error: string): SyncResult => ({ ok: false, error });
+  const TOO_SHORT = failure(`Use at least ${MIN_PASSPHRASE_LENGTH} characters`);
+  const CONFLICT = failure('Another computer synced at the same time — try again');
+
+  function storeKey(k: SyncKey, header: CryptoHeader): void {
+    key = k;
+    deps.keyFile.write(serializeKey(k));
+    lastCrypto = header;
+  }
+
+  function passphraseOp(label: string, fn: () => Promise<SyncResult>): Promise<SyncResult> {
+    return exclusive(async () => {
+      if (!deps.auth.getToken()) return failure('Sign in to GitHub first');
+      if (!deps.secrets.isAvailable()) return failure("Saved passwords aren't available on this computer");
+      try {
+        const result = await fn();
+        publish();
+        return result;
+      } catch (e) {
+        return failure(handleError(e, label));
+      }
+    });
+  }
+
+  const setPassphrase = (passphrase: string) => passphraseOp('set passphrase', async () => {
+    if (passphrase.length < MIN_PASSPHRASE_LENGTH) return TOO_SHORT;
+    await ensureRepo();
+    const { doc, sha } = await fetchDoc();
+    lastCrypto = doc.crypto;
+    if (doc.crypto) return failure('A sync passphrase is already set — enter it instead');
+    const { header, key: k } = createHeader(passphrase);
+    if (await putDoc({ ...doc, crypto: header, secrets: {} }, sha, 'sync: set passphrase') === null) return CONFLICT;
+    storeKey(k, header);
+    await tracked('sync', runCycle);
+    return { ok: true };
+  });
+
+  const enterPassphrase = (passphrase: string) => passphraseOp('enter passphrase', async () => {
+    await ensureRepo();
+    const { doc } = await fetchDoc();
+    lastCrypto = doc.crypto;
+    if (!doc.crypto) return failure('No sync passphrase has been set yet');
+    const k = unlock(passphrase, doc.crypto);
+    if (!k) return failure('Incorrect passphrase');
+    storeKey(k, doc.crypto);
+    await tracked('sync', runCycle);
+    return { ok: true };
+  });
+
+  const changePassphrase = (current: string, nextPassphrase: string) => passphraseOp('change passphrase', async () => {
+    if (nextPassphrase.length < MIN_PASSPHRASE_LENGTH) return TOO_SHORT;
+    await ensureRepo();
+    const first = await fetchDoc();
+    if (!first.doc.crypto) return failure('No sync passphrase has been set yet');
+    const old = unlock(current, first.doc.crypto);
+    if (!old) return failure('Current passphrase is incorrect');
+    storeKey(old, first.doc.crypto);
+    await runCycle();
+    const { doc, sha } = await fetchDoc();
+    if (!doc.crypto || doc.crypto.keyId !== old.keyId) return CONFLICT;
+    const { header, key: k } = createHeader(nextPassphrase);
+    const secrets: Record<string, Entry<EncryptedBlob>> = {};
+    for (const [id, e] of Object.entries(doc.secrets)) {
+      if (!isLive(e)) { secrets[id] = e; continue; }
+      try { secrets[id] = { updatedAt: e.updatedAt, data: encrypt(k.key, decrypt(old.key, e.data)) }; }
+      catch { deps.logger.error(`sync: dropped an unreadable synced password for device ${id} while changing passphrase`); }
+    }
+    if (await putDoc({ ...doc, crypto: header, secrets }, sha, 'sync: change passphrase') === null) return CONFLICT;
+    storeKey(k, header);
+    setStatus({ state: 'synced', lastSynced: now() });
+    return { ok: true };
+  });
+
+  const resetPassphrase = (nextPassphrase: string) => passphraseOp('reset passphrase', async () => {
+    if (nextPassphrase.length < MIN_PASSPHRASE_LENGTH) return TOO_SHORT;
+    await ensureRepo();
+    const { doc, sha } = await fetchDoc();
+    const { header, key: k } = createHeader(nextPassphrase);
+    const t = now();
+    const secrets: Record<string, Entry<EncryptedBlob>> = {};
+    for (const [id, pw] of Object.entries(localPasswords())) {
+      secrets[id] = { updatedAt: state.secrets[id] ?? t, data: encrypt(k.key, pw) };
+    }
+    if (await putDoc({ ...doc, crypto: header, secrets }, sha, 'sync: reset passphrase') === null) return CONFLICT;
+    storeKey(k, header);
+    await tracked('sync', runCycle);
+    return { ok: true };
+  });
 
   return {
     overview,
@@ -298,10 +387,10 @@ export function createSyncService(deps: SyncDeps): SyncService {
       void syncNow();
     },
     noteChange,
-    setPassphrase: notImplemented,
-    enterPassphrase: notImplemented,
-    changePassphrase: notImplemented,
-    resetPassphrase: notImplemented,
+    setPassphrase,
+    enterPassphrase,
+    changePassphrase,
+    resetPassphrase,
     forgetKey() {
       key = null;
       deps.keyFile.clear();

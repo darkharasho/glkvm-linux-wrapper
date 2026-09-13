@@ -95,14 +95,15 @@ export function createStore(baseDir: string) {
       emit({ kind: 'cert-removed', host });
     },
     applyImport(bundle: BackupBundle, mode: 'merge' | 'replace') {
-      const before = devices.map(d => d.id);
+      const before = new Map(devices.map(d => [d.id, JSON.stringify(d)]));
+      const settingsBefore = JSON.stringify(settings);
       const out = applyBackup({ devices, settings }, bundle, mode);
       devices = out.devices; settings = out.settings;
       saveDevices(); saveSettings();
       const after = new Set(devices.map(d => d.id));
-      for (const d of devices) emit({ kind: 'device', id: d.id });
-      for (const id of before) if (!after.has(id)) emit({ kind: 'device-removed', id });
-      emit({ kind: 'settings' });
+      for (const d of devices) if (before.get(d.id) !== JSON.stringify(d)) emit({ kind: 'device', id: d.id });
+      for (const id of before.keys()) if (!after.has(id)) emit({ kind: 'device-removed', id });
+      if (JSON.stringify(settings) !== settingsBefore) emit({ kind: 'settings' });
     },
     exportBundle: (): BackupBundle => buildBackup(devices, settings),
     /** Sync-only: replace local data with merged results. Deliberately emits no change events. */

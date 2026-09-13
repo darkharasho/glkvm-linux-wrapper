@@ -42,10 +42,24 @@ describe('store change events', () => {
     const b = { ...a, id: 'b-id', address: 'kvm-b.local', url: 'https://kvm-b.local' };
     const events: ChangeEvent[] = [];
     s.onChange(e => events.push(e));
-    s.applyImport({ version: 1, devices: [b], settings: DEFAULT_SETTINGS }, 'replace');
+    const settings = { ...DEFAULT_SETTINGS, general: { ...DEFAULT_SETTINGS.general, launchToLastDevice: true } };
+    s.applyImport({ version: 1, devices: [b], settings }, 'replace');
     expect(events).toEqual([
       { kind: 'device', id: 'b-id' }, { kind: 'device-removed', id: a.id }, { kind: 'settings' },
     ]);
+  });
+
+  it('emits only for devices and settings a backup import actually changes', () => {
+    const s = createStore(dir);
+    const a = s.addDevice({ name: 'A', address: 'kvm-a.local' });
+    const b = s.addDevice({ name: 'B', address: 'kvm-b.local' });
+    const events: ChangeEvent[] = [];
+    s.onChange(e => events.push(e));
+    s.applyImport(structuredClone(s.exportBundle()), 'replace');
+    s.applyImport(structuredClone(s.exportBundle()), 'merge');
+    expect(events).toEqual([]);
+    s.applyImport({ version: 1, devices: [a, { ...b, name: 'B2' }], settings: DEFAULT_SETTINGS }, 'merge');
+    expect(events).toEqual([{ kind: 'device', id: b.id }]);
   });
 
   it('emits nothing for mutations that change nothing', () => {

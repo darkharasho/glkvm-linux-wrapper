@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS, validateDevices, validateSettings, coerceOs } from '@
 import { toDeviceUrl, normalizeAddress } from '@shared/url';
 import { applyBackup, buildBackup } from '@shared/backup';
 import type { TrustStore } from '@shared/certs';
+import type { ChangeEvent } from '@shared/sync/format';
 
 function readJson<T>(file: string, fallback: T, validate: (raw: unknown) => T): T {
   if (!existsSync(file)) return fallback;
@@ -36,7 +37,11 @@ export function createStore(baseDir: string) {
   const saveSettings = () => writeJsonAtomic(settingsFile, settings);
   const saveTrust = () => writeJsonAtomic(certsFile, trust);
 
+  const listeners: Array<(e: ChangeEvent) => void> = [];
+  const emit = (e: ChangeEvent) => { for (const l of listeners) l(e); };
+
   return {
+    onChange(listener: (e: ChangeEvent) => void) { listeners.push(listener); },
     getDevices: () => devices,
     addDevice(input: { name: string; address: string; color?: string; os?: OsKind }): Device {
       const address = normalizeAddress(input.address);
@@ -46,6 +51,7 @@ export function createStore(baseDir: string) {
       };
       devices = [...devices, d];
       saveDevices();
+      emit({ kind: 'device', id: d.id });
       return d;
     },
     updateDevice(id: string, patch: Partial<Pick<Device, 'name' | 'address' | 'color' | 'os'>>): Device | null {
@@ -55,25 +61,47 @@ export function createStore(baseDir: string) {
       const updated: Device = { ...devices[i], ...patch, address, url: toDeviceUrl(address), os: coerceOs(patch.os ?? devices[i].os) };
       devices = devices.map(d => d.id === id ? updated : d);
       saveDevices();
+      emit({ kind: 'device', id });
       return updated;
     },
-    removeDevice(id: string) { devices = devices.filter(d => d.id !== id); saveDevices(); },
+    removeDevice(id: string) {
+      const existed = devices.some(d => d.id === id);
+      devices = devices.filter(d => d.id !== id);
+      saveDevices();
+      if (existed) emit({ kind: 'device-removed', id });
+    },
     getSettings: () => settings,
-    setSettings(next: Settings) { settings = validateSettings(next); saveSettings(); },
+    setSettings(next: Settings) { settings = validateSettings(next); saveSettings(); emit({ kind: 'settings' }); },
     getTrustStore: () => trust,
-    trustCert(host: string, fingerprint: string) { trust = { ...trust, [host]: fingerprint }; saveTrust(); },
+    trustCert(host: string, fingerprint: string) {
+      trust = { ...trust, [host]: fingerprint };
+      saveTrust();
+      emit({ kind: 'cert', host });
+    },
     untrustHost(host: string) {
       if (!(host in trust)) return;
       const next = { ...trust };
       delete next[host];
       trust = next;
       saveTrust();
+      emit({ kind: 'cert-removed', host });
     },
     applyImport(bundle: BackupBundle, mode: 'merge' | 'replace') {
+      const before = devices.map(d => d.id);
       const out = applyBackup({ devices, settings }, bundle, mode);
       devices = out.devices; settings = out.settings;
       saveDevices(); saveSettings();
+      const after = new Set(devices.map(d => d.id));
+      for (const d of devices) emit({ kind: 'device', id: d.id });
+      for (const id of before) if (!after.has(id)) emit({ kind: 'device-removed', id });
+      emit({ kind: 'settings' });
     },
     exportBundle: (): BackupBundle => buildBackup(devices, settings),
+    /** Sync-only: replace local data with merged results. Deliberately emits no change events. */
+    applySynced(next: { devices?: Device[]; settings?: Settings; certs?: TrustStore }) {
+      if (next.devices) { devices = validateDevices(next.devices); saveDevices(); }
+      if (next.settings) { settings = validateSettings(next.settings); saveSettings(); }
+      if (next.certs) { trust = { ...next.certs }; saveTrust(); }
+    },
   };
 }

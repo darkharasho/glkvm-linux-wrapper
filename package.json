@@ -20,7 +20,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "electron": "^32.0.0",
-    "electron-builder": "^25.0.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
     "jsdom": "^29.1.1",
